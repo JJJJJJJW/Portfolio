@@ -237,6 +237,13 @@ const AppSidebar: React.FC = () => {
                   <li key={subItem.name}>
                     <Link
                       to={subItem.path}
+                      state={subItem.path === '/dashboard' ? { scrollToOverview: true } : undefined}
+                      onClick={(e) => {
+                        if (location.pathname === subItem.path && subItem.path === '/dashboard') {
+                          e.preventDefault();
+                          document.getElementById('dashboard-content')?.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }}
                       className={`menu-dropdown-item ${isActive(subItem.path)
                         ? "menu-dropdown-item-active"
                         : "menu-dropdown-item-inactive"

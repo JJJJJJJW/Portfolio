@@ -15,6 +15,17 @@ const LayoutContent: React.FC = () => {
   const isDashboardRoot = location.pathname === '/dashboard';
 
   useEffect(() => {
+    if (location.state && (location.state as any).scrollToOverview) {
+      setTimeout(() => {
+        document.getElementById('dashboard-content')?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+
+      // Clean up state so a simple page refresh doesn't trigger scroll again
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
+
+  useEffect(() => {
     const container = document.getElementById('main-scroll-container');
     if (!container || !isDashboardRoot) return;
 
