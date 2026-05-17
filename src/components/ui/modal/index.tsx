@@ -1,4 +1,5 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface ModalProps {
   isOpen: boolean;
@@ -18,6 +19,22 @@ export const Modal: React.FC<ModalProps> = ({
   isFullscreen = false,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
+  const [isRendered, setIsRendered] = useState(isOpen);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsRendered(true);
+      // Small delay to allow CSS transitions to run after mount
+      const timer = setTimeout(() => setIsVisible(true), 10);
+      return () => clearTimeout(timer);
+    } else {
+      setIsVisible(false);
+      // Wait for the exit transition to finish before unmounting (300ms)
+      const timer = setTimeout(() => setIsRendered(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -47,23 +64,23 @@ export const Modal: React.FC<ModalProps> = ({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isRendered) return null;
 
   const contentClasses = isFullscreen
     ? "w-full h-full"
     : "relative w-full rounded-3xl bg-white  dark:bg-gray-900";
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 flex items-center justify-center overflow-y-auto modal z-99999">
       {!isFullscreen && (
         <div
-          className="fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]"
+          className={`fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[10px] transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
           onClick={onClose}
         ></div>
       )}
       <div
         ref={modalRef}
-        className={`${contentClasses}  ${className}`}
+        className={`${contentClasses} ${className || ''} transition-all duration-300 ease-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {showCloseButton && (
@@ -89,6 +106,7 @@ export const Modal: React.FC<ModalProps> = ({
         )}
         <div>{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

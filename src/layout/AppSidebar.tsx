@@ -16,7 +16,6 @@ import {
   UserCircleIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
-import SidebarWidget from "./SidebarWidget";
 
 type NavItem = {
   name: string;
@@ -28,12 +27,15 @@ type NavItem = {
 const navItems: NavItem[] = [
   {
     icon: <GridIcon />,
-    name: "Dashboard",
-    subItems: [{ name: "Finance", path: "/", pro: false }],
+    name: "Investment",
+    subItems: [
+      { name: "Overview", path: "/dashboard", pro: false },
+      { name: "Positions", path: "/positions", pro: false }
+    ],
   },
   {
     icon: <CalenderIcon />,
-    name: "Calendar",
+    name: "P/L Calendar",
     path: "/calendar",
   },
   {
@@ -276,7 +278,7 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
+      className={`absolute mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
         ${isExpanded || isMobileOpen
           ? "w-[290px]"
           : isHovered
@@ -292,33 +294,46 @@ const AppSidebar: React.FC = () => {
         className={`py-8 flex ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
           }`}
       >
-        <Link to="/">
+        <Link
+          to="/"
+          onClick={(e) => {
+            if (location.pathname === '/dashboard') {
+              e.preventDefault();
+              document.getElementById('landing-page')?.scrollIntoView({ behavior: 'smooth' });
+            }
+          }}
+        >
           {isExpanded || isHovered || isMobileOpen ? (
-            <>
+            <div className="flex items-center gap-3">
               <img
-                className="dark:hidden"
-                src="/images/logo/logo.svg"
+                className="dark:hidden rounded-lg"
+                src="/images/logo/TechFolio.png"
                 alt="Logo"
-                width={150}
-                height={40}
+                width={35}
+                height={35}
               />
               <img
-                className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
+                className="hidden dark:block rounded-lg"
+                src="/images/logo/TechFolio.png"
                 alt="Logo"
-                width={150}
-                height={40}
+                width={35}
+                height={35}
               />
-            </>
+              <span className="font-semibold text-lg dark:text-white">
+                TechFolio
+              </span>
+            </div>
           ) : (
             <img
-              src="/images/logo/logo-icon.svg"
+              className="rounded-lg"
+              src="/images/logo/TechFolio.png"
               alt="Logo"
-              width={32}
-              height={32}
+              width={35}
+              height={35}
             />
           )}
         </Link>
+
       </div>
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">
@@ -350,6 +365,7 @@ const AppSidebar: React.FC = () => {
                 ) : (
                   <HorizontaLDots />
                 )}
+
               </h2>
               {renderMenuItems(othersItems, "others")}
             </div>
