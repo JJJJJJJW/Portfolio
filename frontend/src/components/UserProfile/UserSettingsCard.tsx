@@ -3,14 +3,46 @@ import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
+import { useUser } from "../../context/UserContext";
+import { useEffect, useState } from "react";
 
 export default function UserSettingsCard() {
+  const { user, updateProfile, isAuthenticated } = useUser();
   const { isOpen, openModal, closeModal } = useModal();
-  const handleSave = () => {
-    // Handle save logic here
-    console.log("Saving settings...");
+  const [currency, setCurrency] = useState("PHP");
+  const [riskAppetite, setRiskAppetite] = useState("Moderate");
+
+  useEffect(() => {
+    if (user) {
+      setCurrency(user.currency || "PHP");
+    } else {
+      setCurrency("USD");
+    }
+  }, [user, isOpen]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      console.log("Guest save settings:", { currency, riskAppetite });
+      closeModal();
+      return;
+    }
+
+    const success = await updateProfile(
+      user?.displayName || "",
+      user?.avatarUrl || "",
+      currency
+    );
+
+    if (success) {
+      console.log("Settings updated successfully!");
+    } else {
+      console.error("Failed to update settings.");
+    }
     closeModal();
   };
+
+  const displayCurrency = user?.currency || "USD";
   return (
     <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -25,7 +57,7 @@ export default function UserSettingsCard() {
                 Currency
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                USD
+                {displayCurrency}
               </p>
             </div>
 
@@ -73,7 +105,7 @@ export default function UserSettingsCard() {
               Update your preferences for currency and risk appetite.
             </p>
           </div>
-          <form className="flex flex-col">
+          <form onSubmit={handleSave} className="flex flex-col">
             <div className="custom-scrollbar overflow-y-auto px-2 pb-3">
               <div className="mt-7">
                 <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
@@ -83,21 +115,29 @@ export default function UserSettingsCard() {
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Currency</Label>
-                    <Input type="text" value="USD" />
+                    <Input
+                      type="text"
+                      value={currency}
+                      onChange={(e: any) => setCurrency(e.target.value)}
+                    />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Risk Appetite</Label>
-                    <Input type="text" value="Moderate" />
+                    <Input
+                      type="text"
+                      value={riskAppetite}
+                      onChange={(e: any) => setRiskAppetite(e.target.value)}
+                    />
                   </div>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-              <Button size="sm" variant="outline" onClick={closeModal}>
+              <Button type="button" size="sm" variant="outline" onClick={closeModal}>
                 Close
               </Button>
-              <Button size="sm" onClick={handleSave}>
+              <Button type="submit" size="sm">
                 Save Changes
               </Button>
             </div>
