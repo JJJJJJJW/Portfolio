@@ -102,12 +102,6 @@ const PLCalendar: React.FC = () => {
     return entries.reduce((worst, curr) => (curr[1].pl < worst[1].pl ? curr : worst));
   }, [dailyPL]);
 
-  const winRate = useMemo(() => {
-    const vals = Object.values(dailyPL);
-    if (vals.length === 0) return 0;
-    return Math.round((vals.filter(v => v.pl > 0).length / vals.length) * 100);
-  }, [dailyPL]);
-
   // --- Calendar Grid Helpers ---
   const getCalendarDays = () => {
     const firstDay = new Date(currentYear, currentMonth, 1);
@@ -424,7 +418,7 @@ const PLCalendar: React.FC = () => {
           {viewMode === "year" && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {MONTHS.map((monthName, monthIdx) => {
+                {MONTHS.map((_, monthIdx) => {
                   const key = `${currentYear}-${String(monthIdx + 1).padStart(2, "0")}`;
                   const entry = yearlyPL[key];
                   const hasData = entry !== undefined;

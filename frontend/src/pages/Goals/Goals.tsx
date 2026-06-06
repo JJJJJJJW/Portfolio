@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import Badge from "../../components/ui/badge/Badge";
-import { Modal } from "../../components/ui/modal";
 import { FinancialGoal, GoalCategory, GoalStatus, Contribution } from "./types";
 import {
-  PlusIcon,
   DollarLineIcon,
   TrashBinIcon,
   CalenderIcon,
@@ -336,7 +334,6 @@ export default function Goals() {
                 const percent = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
 
                 const dateObj = new Date(goal.targetDate);
-                const isOverdue = new Date() > dateObj && goal.currentAmount < goal.targetAmount;
                 const formattedDate = dateObj.toLocaleDateString(undefined, {
                   year: "numeric",
                   month: "short",

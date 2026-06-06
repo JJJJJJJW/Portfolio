@@ -1,6 +1,6 @@
-import SplitText from "../components/SplitText";
-import LogoLoop from "../components/LogoLoop";
-import LiveBackground from "../LiveBackground";
+import SplitText from "../components/SplitText.tsx";
+import LogoLoop from "../components/LogoLoop.tsx";
+import LiveBackground from "../LiveBackground.tsx";
 import { SiReact, SiTailwindcss, SiSpringboot, SiSupabase, SiGooglegemini } from 'react-icons/si';
 import { Rocket } from 'lucide-react';
 

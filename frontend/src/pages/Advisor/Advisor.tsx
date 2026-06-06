@@ -1,11 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import Badge from "../../components/ui/badge/Badge";
-import {
-  InfoIcon,
-  CheckCircleIcon,
-  TimeIcon
-} from "../../icons";
+import { CheckCircleIcon } from "../../icons";
 
 interface MockPosition {
   name: string;
@@ -191,7 +187,6 @@ export default function Advisor() {
     : null;
 
   const displayBtcPct = currentSnapshot ? currentSnapshot.btcAllocationPct : 72.5;
-  const displayTotalValue = currentSnapshot ? currentSnapshot.totalPortfolioValue : totalPortfolioValue;
   const displayTodoItems = currentSnapshot ? currentSnapshot.todoItems : todoList;
   const displayBtcAdvice = currentSnapshot ? currentSnapshot.btcConcentrationAdvice : "Your Bitcoin holdings make up 72.5% ($32,600.00) of your overall investments. Standard diversified asset advice recommends capping speculative digital asset classes below 15-20% of total holdings to prevent extreme portfolio volatility.";
   const displayDebtAdvice = currentSnapshot ? currentSnapshot.debtAdvice : "Your Credit Card Debt Clearance goal is set to mature soon, but is currently sitting at only 30% completion ($1,200 saved of $4,000 target). Leaving unresolved credit card balances incurs heavy interest penalties (often > 20% APR).";

@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import AppHeader from "./AppHeader";
 import Backdrop from "./Backdrop";
 import AppSidebar from "./AppSidebar";
-import ColorBends from "../components/ColorBends";
+import ColorBends from "../components/ColorBends.tsx";
 import LandingPage from "../pages/LandingPage";
 import { useTheme } from "../context/ThemeContext";
 
