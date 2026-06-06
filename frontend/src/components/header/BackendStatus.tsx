@@ -26,7 +26,7 @@ export const BackendStatus: React.FC = () => {
   const checkHealth = useCallback(async () => {
     const startTime = performance.now();
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || "http://localhost:8080";
       const response = await fetch(`${apiUrl}/api/v1/health`, {
         method: "GET",
         headers: {

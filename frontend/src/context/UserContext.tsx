@@ -1,6 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { supabase } from "../lib/supabaseClient";
-import { Session } from "@supabase/supabase-js";
 
 export interface DbUser {
   id: string;
@@ -12,11 +10,16 @@ export interface DbUser {
   updatedAt: string;
 }
 
+export interface Session {
+  access_token: string;
+}
+
 interface UserContextType {
   user: DbUser | null;
   session: Session | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (displayName: string, avatarUrl: string, currency: string) => Promise<boolean>;
   isAuthenticated: boolean;
@@ -24,7 +27,7 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
@@ -46,63 +49,102 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         console.error("Failed to sync user with backend:", response.statusText);
         setUser(null);
+        setSession(null);
+        localStorage.removeItem("techfolio_session");
       }
     } catch (err) {
       console.error("Network error syncing user with backend:", err);
       setUser(null);
+      setSession(null);
+      localStorage.removeItem("techfolio_session");
     }
   };
 
   useEffect(() => {
-    // 1. Get initial session
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      setSession(initialSession);
-      if (initialSession) {
-        syncUserWithBackend(initialSession).finally(() => setLoading(false));
-      } else {
-        setUser(null);
-        setLoading(false);
+    const initSession = async () => {
+      const storedSession = localStorage.getItem("techfolio_session");
+      if (storedSession) {
+        try {
+          const parsedSession: Session = JSON.parse(storedSession);
+          setSession(parsedSession);
+          await syncUserWithBackend(parsedSession);
+        } catch (e) {
+          console.error("Failed to parse stored session:", e);
+          localStorage.removeItem("techfolio_session");
+        }
       }
-    });
-
-    // 2. Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      setSession(currentSession);
-      if (currentSession) {
-        setLoading(true);
-        syncUserWithBackend(currentSession).finally(() => setLoading(false));
-      } else {
-        setUser(null);
-        setLoading(false);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
+      setLoading(false);
     };
+
+    initSession();
   }, []);
 
-  const signInWithGoogle = async () => {
+  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+      setLoading(true);
+      const response = await fetch(`${API_URL}/api/v1/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({ email, password }),
       });
-      if (error) throw error;
-    } catch (err) {
-      console.error("Error signing in with Google:", err);
+
+      if (response.ok) {
+        const data = await response.json();
+        const token = data.token || data.access_token;
+        if (!token) {
+          throw new Error("No token returned from backend login");
+        }
+
+        const newSession = { access_token: token };
+        setSession(newSession);
+        localStorage.setItem("techfolio_session", JSON.stringify(newSession));
+        await syncUserWithBackend(newSession);
+        return { success: true };
+      } else {
+        const errText = await response.text().catch(() => "Login failed");
+        return { success: false, error: errText || `Login failed (Status: ${response.status})` };
+      }
+    } catch (err: any) {
+      console.error("Login request failed:", err);
+      return { success: false, error: err.message || "Network error. Please make sure the backend is running." };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signUp = async (email: string, password: string, firstName: string, lastName: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/api/v1/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password, firstName, lastName }),
+      });
+
+      if (response.ok) {
+        return { success: true };
+      } else {
+        const errText = await response.text().catch(() => "Registration failed");
+        return { success: false, error: errText || `Registration failed (Status: ${response.status})` };
+      }
+    } catch (err: any) {
+      console.error("Registration request failed:", err);
+      return { success: false, error: err.message || "Network error. Please make sure the backend is running." };
+    } finally {
+      setLoading(false);
     }
   };
 
   const signOut = async () => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
       setUser(null);
       setSession(null);
+      localStorage.removeItem("techfolio_session");
     } catch (err) {
       console.error("Error signing out:", err);
     } finally {
@@ -141,7 +183,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         session,
         loading,
-        signInWithGoogle,
+        signIn,
+        signUp,
         signOut,
         updateProfile,
         isAuthenticated: !!user,
