@@ -84,16 +84,18 @@ const AppHeader: React.FC = () => {
           </button>
 
           <Link to="/" className="lg:hidden">
+          <div className="flex items-center gap-3">
             <img
-              className="dark:hidden"
-              src="./images/logo/logo.svg"
+              className="rounded-lg"
+              src="/images/logo/TechFolio.png"
               alt="Logo"
+              width={35}
+              height={35}
             />
-            <img
-              className="hidden dark:block"
-              src="./images/logo/logo-dark.svg"
-              alt="Logo"
-            />
+            <span className="font-semibold text-lg dark:text-white">
+              TechFolio
+            </span>
+          </div>
           </Link>
 
           <button
