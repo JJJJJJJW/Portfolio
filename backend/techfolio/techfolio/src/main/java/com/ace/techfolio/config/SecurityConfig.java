@@ -26,6 +26,9 @@ public class SecurityConfig {
     @Value("${techfolio.jwt.secret}")
     private String jwtSecret;
 
+    @Value("${FRONTEND_URL:}")
+    private String frontendUrl;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -41,9 +44,10 @@ public class SecurityConfig {
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(Customizer.withDefaults()))
 
-            // 4. Secure api endpoints (except health endpoint)
+            // 4. Secure api endpoints (except health and auth endpoints)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/health").permitAll()
+                .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/users/me").authenticated()
                 .anyRequest().authenticated()
             );
@@ -64,12 +68,16 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Explicitly allow local Vite frontend origins
-        configuration.setAllowedOrigins(List.of(
+        // Allow local dev + production frontend origins
+        java.util.List<String> origins = new java.util.ArrayList<>(List.of(
             "http://localhost:5173",
             "http://127.0.0.1:5173",
             "http://localhost:3000"
         ));
+        if (frontendUrl != null && !frontendUrl.isBlank()) {
+            origins.add(frontendUrl);
+        }
+        configuration.setAllowedOrigins(origins);
 
         // Allow standard REST methods
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
