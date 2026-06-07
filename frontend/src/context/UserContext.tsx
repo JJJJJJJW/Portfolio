@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "../lib/supabaseClient";
 
 export interface DbUser {
   id: string;
@@ -19,6 +20,7 @@ interface UserContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (displayName: string, avatarUrl: string, currency: string) => Promise<boolean>;
@@ -62,6 +64,20 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const initSession = async () => {
+      // First, check if Supabase has a session (handles OAuth redirect callback)
+      const { data: { session: supabaseSession } } = await supabase.auth.getSession();
+
+      if (supabaseSession?.access_token) {
+        // User authenticated via Supabase OAuth (Google sign-in)
+        const newSession = { access_token: supabaseSession.access_token };
+        setSession(newSession);
+        localStorage.setItem("techfolio_session", JSON.stringify(newSession));
+        await syncUserWithBackend(newSession);
+        setLoading(false);
+        return;
+      }
+
+      // Fall back to locally stored session (email/password sign-in)
       const storedSession = localStorage.getItem("techfolio_session");
       if (storedSession) {
         try {
@@ -77,6 +93,30 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     initSession();
+
+    // Listen for Supabase auth state changes (handles token refresh & OAuth callbacks)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, supabaseSession) => {
+        if (event === "SIGNED_IN" && supabaseSession?.access_token) {
+          const newSession = { access_token: supabaseSession.access_token };
+          setSession(newSession);
+          localStorage.setItem("techfolio_session", JSON.stringify(newSession));
+          await syncUserWithBackend(newSession);
+        } else if (event === "TOKEN_REFRESHED" && supabaseSession?.access_token) {
+          const newSession = { access_token: supabaseSession.access_token };
+          setSession(newSession);
+          localStorage.setItem("techfolio_session", JSON.stringify(newSession));
+        } else if (event === "SIGNED_OUT") {
+          setUser(null);
+          setSession(null);
+          localStorage.removeItem("techfolio_session");
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
@@ -114,6 +154,31 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin + "/dashboard",
+        },
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      // The browser will redirect to Google — success is handled by the
+      // onAuthStateChange listener after the redirect callback
+      return { success: true };
+    } catch (err: any) {
+      console.error("Google sign-in failed:", err);
+      return { success: false, error: err.message || "Google sign-in failed" };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signUp = async (email: string, password: string, firstName: string, lastName: string): Promise<{ success: boolean; error?: string }> => {
     try {
       setLoading(true);
@@ -142,6 +207,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       setLoading(true);
+      // Sign out from Supabase (clears OAuth session)
+      await supabase.auth.signOut();
       setUser(null);
       setSession(null);
       localStorage.removeItem("techfolio_session");
@@ -184,6 +251,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         session,
         loading,
         signIn,
+        signInWithGoogle,
         signUp,
         signOut,
         updateProfile,
