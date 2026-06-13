@@ -1,6 +1,6 @@
 import { SidebarProvider, useSidebar } from "../context/SidebarContext";
 import { Outlet, useLocation, useNavigate } from "react-router";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import AppHeader from "./AppHeader";
 import Backdrop from "./Backdrop";
 import AppSidebar from "./AppSidebar";
@@ -9,17 +9,49 @@ import LandingPage from "../pages/LandingPage";
 import { useTheme } from "../context/ThemeContext";
 import { useUser } from "../context/UserContext";
 import GuestBanner from "../components/common/GuestBanner";
+import { Modal } from "../components/ui/modal";
+import Select from "../components/form/Select";
+import Label from "../components/form/Label";
+import Button from "../components/ui/button/Button";
 
 const LayoutContent: React.FC = () => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const { theme } = useTheme();
-  const { isAuthenticated } = useUser();
+  const { isAuthenticated, user, updateProfile } = useUser();
   const isDashboardRoot = location.pathname === '/dashboard';
   const prevAuthRef = useRef(isAuthenticated);
   // Show landing page on the dashboard route for all users (guests and authenticated)
   const showLandingPage = isDashboardRoot;
+
+  const [showSetupModal, setShowSetupModal] = useState(false);
+  const [setupCurrency, setSetupCurrency] = useState("USD");
+  const [setupRisk, setSetupRisk] = useState("Moderate");
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const needsSetup = !user.currency || !user.riskAppetite;
+      setShowSetupModal(needsSetup);
+    } else {
+      setShowSetupModal(false);
+    }
+  }, [isAuthenticated, user]);
+
+  const handleSetupSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (user) {
+      const success = await updateProfile(
+        user.displayName || "Google User",
+        user.avatarUrl || "",
+        setupCurrency,
+        setupRisk
+      );
+      if (success) {
+        setShowSetupModal(false);
+      }
+    }
+  };
 
   useEffect(() => {
     // Scroll smoothly back to top (landing page) on logout
@@ -160,6 +192,50 @@ const LayoutContent: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* First-time setup modal for logged in users */}
+      <Modal isOpen={showSetupModal} onClose={() => {}} className="max-w-[500px] m-4" showCloseButton={false}>
+        <div className="bg-white p-6 dark:bg-gray-900 rounded-3xl relative">
+          <div className="mb-6">
+            <h4 className="text-xl font-bold text-gray-800 dark:text-white/90 mb-2">
+              Setup Your Portfolio
+            </h4>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Welcome to Techfolio! Please select your default currency and risk appetite to initialize your profile.
+            </p>
+          </div>
+          <form onSubmit={handleSetupSave} className="space-y-4">
+            <div>
+              <Label>Currency</Label>
+              <Select
+                options={[
+                  { value: "USD", label: "USD ($)" },
+                  { value: "MYR", label: "MYR (RM)" },
+                ]}
+                defaultValue="USD"
+                onChange={(val) => setSetupCurrency(val)}
+              />
+            </div>
+            <div>
+              <Label>Risk Appetite</Label>
+              <Select
+                options={[
+                  { value: "Conservative", label: "Conservative" },
+                  { value: "Moderate", label: "Moderate" },
+                  { value: "Aggressive", label: "Aggressive" },
+                ]}
+                defaultValue="Moderate"
+                onChange={(val) => setSetupRisk(val)}
+              />
+            </div>
+            <div className="pt-4 flex justify-end">
+              <Button type="submit" size="sm">
+                Get Started
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
     </div>
   );
 };

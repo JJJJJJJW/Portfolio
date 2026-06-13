@@ -77,8 +77,6 @@ public class UserService {
                 newUser.setDisplayName("User");
             }
             
-            newUser.setCurrency("PHP"); // Default currency
-            
             return userRepository.save(newUser);
         });
     }
@@ -87,7 +85,7 @@ public class UserService {
      * Updates user profile fields.
      */
     @Transactional
-    public AppUser updateUserProfile(UUID userId, String displayName, String avatarUrl, String currency) {
+    public AppUser updateUserProfile(UUID userId, String displayName, String avatarUrl, String currency, String riskAppetite) {
         AppUser user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
         
@@ -99,6 +97,9 @@ public class UserService {
         }
         if (currency != null && currency.length() == 3) {
             user.setCurrency(currency.toUpperCase());
+        }
+        if (riskAppetite != null && !riskAppetite.trim().isEmpty()) {
+            user.setRiskAppetite(riskAppetite.trim());
         }
         
         return userRepository.save(user);

@@ -55,8 +55,9 @@ public class UserController {
         String displayName = updates.get("displayName");
         String avatarUrl = updates.get("avatarUrl");
         String currency = updates.get("currency");
+        String riskAppetite = updates.get("riskAppetite");
         
-        AppUser updated = userService.updateUserProfile(userId, displayName, avatarUrl, currency);
+        AppUser updated = userService.updateUserProfile(userId, displayName, avatarUrl, currency, riskAppetite);
         return ResponseEntity.ok(updated);
     }
 }

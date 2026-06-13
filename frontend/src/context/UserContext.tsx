@@ -8,6 +8,7 @@ export interface DbUser {
   displayName: string;
   avatarUrl: string;
   currency: string;
+  riskAppetite: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -22,9 +23,9 @@ interface UserContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
-  signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (email: string, password: string, firstName: string, lastName: string, currency: string, riskAppetite: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
-  updateProfile: (displayName: string, avatarUrl: string, currency: string) => Promise<boolean>;
+  updateProfile: (displayName: string, avatarUrl: string, currency: string, riskAppetite: string) => Promise<boolean>;
   isAuthenticated: boolean;
   showToast: (message: string, type?: "success" | "error" | "info") => void;
 }
@@ -219,7 +220,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (email: string, password: string, firstName: string, lastName: string): Promise<{ success: boolean; error?: string }> => {
+  const signUp = async (email: string, password: string, firstName: string, lastName: string, currency: string, riskAppetite: string): Promise<{ success: boolean; error?: string }> => {
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/api/v1/auth/register`, {
@@ -227,7 +228,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password, firstName, lastName }),
+        body: JSON.stringify({ email, password, firstName, lastName, currency, riskAppetite }),
       });
 
       if (response.ok) {
@@ -261,7 +262,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updateProfile = async (displayName: string, avatarUrl: string, currency: string): Promise<boolean> => {
+  const updateProfile = async (displayName: string, avatarUrl: string, currency: string, riskAppetite: string): Promise<boolean> => {
     if (!session) return false;
 
     try {
@@ -271,7 +272,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ displayName, avatarUrl, currency }),
+        body: JSON.stringify({ displayName, avatarUrl, currency, riskAppetite }),
       });
 
       if (response.ok) {

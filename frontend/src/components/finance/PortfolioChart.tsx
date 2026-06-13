@@ -18,6 +18,9 @@ export default function PortfolioChart({ chartData }: PortfolioChartProps) {
       toolbar: {
         show: false,
       },
+      zoom: {
+        enabled: false,
+      },
     },
     dataLabels: {
       enabled: false,
@@ -107,8 +110,8 @@ export default function PortfolioChart({ chartData }: PortfolioChartProps) {
         </div>
       </div>
 
-      <div className="max-w-full overflow-x-auto custom-scrollbar">
-        <div className="-ml-5 min-w-[650px] xl:min-w-full pl-2">
+      <div className="w-full">
+        <div className="-ml-5 pl-2">
           <Chart options={options} series={series} type="area" height={300} />
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { useModal } from "../../hooks/useModal";
 import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
-import Input from "../form/input/InputField";
+import Select from "../form/Select";
 import Label from "../form/Label";
 import { useUser } from "../../context/UserContext";
 import { useEffect, useState } from "react";
@@ -9,14 +9,16 @@ import { useEffect, useState } from "react";
 export default function UserSettingsCard() {
   const { user, updateProfile, isAuthenticated } = useUser();
   const { isOpen, openModal, closeModal } = useModal();
-  const [currency, setCurrency] = useState("PHP");
+  const [currency, setCurrency] = useState("USD");
   const [riskAppetite, setRiskAppetite] = useState("Moderate");
 
   useEffect(() => {
     if (user) {
-      setCurrency(user.currency || "PHP");
+      setCurrency(user.currency || "USD");
+      setRiskAppetite(user.riskAppetite || "Moderate");
     } else {
       setCurrency("USD");
+      setRiskAppetite("Moderate");
     }
   }, [user, isOpen]);
 
@@ -31,7 +33,8 @@ export default function UserSettingsCard() {
     const success = await updateProfile(
       user?.displayName || "",
       user?.avatarUrl || "",
-      currency
+      currency,
+      riskAppetite
     );
 
     if (success) {
@@ -66,7 +69,7 @@ export default function UserSettingsCard() {
                 Risk Appetite
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Moderate
+                {user?.riskAppetite || "Moderate"}
               </p>
             </div>
           </div>
@@ -115,19 +118,26 @@ export default function UserSettingsCard() {
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Currency</Label>
-                    <Input
-                      type="text"
-                      value={currency}
-                      onChange={(e: any) => setCurrency(e.target.value)}
+                    <Select
+                      options={[
+                        { value: "USD", label: "USD ($)" },
+                        { value: "MYR", label: "MYR (RM)" },
+                      ]}
+                      defaultValue={currency}
+                      onChange={(val) => setCurrency(val)}
                     />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Risk Appetite</Label>
-                    <Input
-                      type="text"
-                      value={riskAppetite}
-                      onChange={(e: any) => setRiskAppetite(e.target.value)}
+                    <Select
+                      options={[
+                        { value: "Conservative", label: "Conservative" },
+                        { value: "Moderate", label: "Moderate" },
+                        { value: "Aggressive", label: "Aggressive" },
+                      ]}
+                      defaultValue={riskAppetite}
+                      onChange={(val) => setRiskAppetite(val)}
                     />
                   </div>
                 </div>

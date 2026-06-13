@@ -46,8 +46,12 @@ public class AppUser {
     private String avatarUrl;
 
     @Size(max = 3)
-    @Column(name = "currency", length = 3, nullable = false)
-    private String currency = "PHP";
+    @Column(name = "currency", length = 3)
+    private String currency;
+
+    @Size(max = 50)
+    @Column(name = "risk_appetite", length = 50)
+    private String riskAppetite;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -125,6 +129,14 @@ public class AppUser {
 
     public void setCurrency(String currency) {
         this.currency = currency;
+    }
+
+    public String getRiskAppetite() {
+        return riskAppetite;
+    }
+
+    public void setRiskAppetite(String riskAppetite) {
+        this.riskAppetite = riskAppetite;
     }
 
     public LocalDateTime getCreatedAt() {

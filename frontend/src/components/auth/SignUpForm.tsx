@@ -4,6 +4,7 @@ import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
+import Select from "../form/Select";
 import { useUser } from "../../context/UserContext";
 
 export default function SignUpForm() {
@@ -15,6 +16,8 @@ export default function SignUpForm() {
   const [lname, setLname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [currency, setCurrency] = useState("USD");
+  const [riskAppetite, setRiskAppetite] = useState("Moderate");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,7 +36,7 @@ export default function SignUpForm() {
 
     setIsSubmitting(true);
     try {
-      const res = await signUp(email, password, fname, lname);
+      const res = await signUp(email, password, fname, lname, currency, riskAppetite);
       if (res.success) {
         setSuccess(true);
         setFname("");
@@ -212,6 +215,36 @@ export default function SignUpForm() {
                         <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
                       )}
                     </span>
+                  </div>
+                </div>
+                {/* <!-- Currency & Risk Appetite --> */}
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div className="sm:col-span-1">
+                    <Label>
+                      Currency<span className="text-error-500">*</span>
+                    </Label>
+                    <Select
+                      options={[
+                        { value: "USD", label: "USD ($)" },
+                        { value: "MYR", label: "MYR (RM)" },
+                      ]}
+                      defaultValue="USD"
+                      onChange={(val) => setCurrency(val)}
+                    />
+                  </div>
+                  <div className="sm:col-span-1">
+                    <Label>
+                      Risk Appetite<span className="text-error-500">*</span>
+                    </Label>
+                    <Select
+                      options={[
+                        { value: "Conservative", label: "Conservative" },
+                        { value: "Moderate", label: "Moderate" },
+                        { value: "Aggressive", label: "Aggressive" },
+                      ]}
+                      defaultValue="Moderate"
+                      onChange={(val) => setRiskAppetite(val)}
+                    />
                   </div>
                 </div>
                 {/* <!-- Checkbox --> */}

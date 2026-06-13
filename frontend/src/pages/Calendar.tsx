@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import PageMeta from "../components/common/PageMeta";
+import { useUser } from "../context/UserContext";
+import { usePortfolioData } from "../hooks/usePortfolioData";
 
 // --- Types ---
 interface PLEntry {
@@ -50,12 +52,106 @@ const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Se
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const PLCalendar: React.FC = () => {
+  const { isAuthenticated, user } = useUser();
+  const { transactions } = usePortfolioData();
+
   const [viewMode, setViewMode] = useState<"month" | "year">("month");
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [isVisible, setIsVisible] = useState(false);
   const [selectedDay, setSelectedDay] = useState<{ date: string; pl: number; pct: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // --- Dynamic Realized P/L Calculation for Authenticated Users ---
+  const calculatedData = useMemo(() => {
+    if (!isAuthenticated) return null;
+
+    // Track holdings: { quantity: number, costBasis: number }
+    const holdings: Record<string, { quantity: number; costBasis: number }> = {};
+    const dailyPL: Record<string, { pl: number; costBasis: number }> = {};
+
+    // Sort transactions chronologically (ascending date)
+    const sortedTxs = [...transactions].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    for (const tx of sortedTxs) {
+      const symbol = tx.symbol.toUpperCase();
+      const qty = tx.quantity;
+      const price = tx.price;
+      const date = tx.date; // "YYYY-MM-DD"
+
+      if (!holdings[symbol]) {
+        holdings[symbol] = { quantity: 0, costBasis: 0 };
+      }
+
+      const holding = holdings[symbol];
+
+      if (tx.type === "buy") {
+        holding.quantity += qty;
+        holding.costBasis += qty * price;
+      } else if (tx.type === "sell") {
+        const avgPrice = holding.quantity > 0 ? holding.costBasis / holding.quantity : 0;
+        const realizedPL = (price - avgPrice) * qty;
+
+        // Update holdings
+        holding.quantity = Math.max(0, holding.quantity - qty);
+        if (holding.quantity === 0) {
+          holding.costBasis = 0;
+        } else {
+          holding.costBasis = holding.quantity * avgPrice;
+        }
+
+        // Aggregate daily realized P/L
+        if (!dailyPL[date]) {
+          dailyPL[date] = { pl: 0, costBasis: 0 };
+        }
+        dailyPL[date].pl += realizedPL;
+        dailyPL[date].costBasis += qty * avgPrice;
+      }
+    }
+
+    // Convert daily P/L to final format
+    const dailyResults: Record<string, PLEntry> = {};
+    for (const [date, info] of Object.entries(dailyPL)) {
+      const pct = info.costBasis > 0 ? (info.pl / info.costBasis) * 100 : 0;
+      dailyResults[date] = {
+        pl: Math.round(info.pl * 100) / 100,
+        pct: Math.round(pct * 100) / 100,
+      };
+    }
+
+    // Also calculate yearly PL for the current year
+    const yearlyResults: Record<string, PLEntry> = {};
+    const monthlyPL: Record<string, { pl: number; costBasis: number }> = {};
+
+    // Initialize all months of the year
+    for (let m = 0; m < 12; m++) {
+      const monthKey = `${currentYear}-${String(m + 1).padStart(2, "0")}`;
+      monthlyPL[monthKey] = { pl: 0, costBasis: 0 };
+    }
+
+    // Aggregate daily results by month for currentYear
+    for (const [dateStr, info] of Object.entries(dailyPL)) {
+      if (dateStr.startsWith(`${currentYear}-`)) {
+        const monthKey = dateStr.substring(0, 7); // "YYYY-MM"
+        if (monthlyPL[monthKey]) {
+          monthlyPL[monthKey].pl += info.pl;
+          monthlyPL[monthKey].costBasis += info.costBasis;
+        }
+      }
+    }
+
+    for (const [monthKey, info] of Object.entries(monthlyPL)) {
+      const pct = info.costBasis > 0 ? (info.pl / info.costBasis) * 100 : 0;
+      yearlyResults[monthKey] = {
+        pl: Math.round(info.pl * 100) / 100,
+        pct: Math.round(pct * 100) / 100,
+      };
+    }
+
+    return { dailyPL: dailyResults, yearlyPL: yearlyResults };
+  }, [isAuthenticated, transactions, currentYear]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -70,8 +166,19 @@ const PLCalendar: React.FC = () => {
   }, []);
 
   // --- Data Generation (memoized) ---
-  const dailyPL = useMemo(() => generateDailyPL(currentYear, currentMonth), [currentYear, currentMonth]);
-  const yearlyPL = useMemo(() => generateYearlyPL(currentYear), [currentYear]);
+  const dailyPL = useMemo(() => {
+    if (isAuthenticated && calculatedData) {
+      return calculatedData.dailyPL;
+    }
+    return generateDailyPL(currentYear, currentMonth);
+  }, [isAuthenticated, calculatedData, currentYear, currentMonth]);
+
+  const yearlyPL = useMemo(() => {
+    if (isAuthenticated && calculatedData) {
+      return calculatedData.yearlyPL;
+    }
+    return generateYearlyPL(currentYear);
+  }, [isAuthenticated, calculatedData, currentYear]);
 
   // --- Summary Stats ---
   const monthTotal = useMemo(() => {
@@ -185,14 +292,19 @@ const PLCalendar: React.FC = () => {
   };
 
   // --- Formatting ---
+  const currencySymbol = useMemo(() => {
+    if (isAuthenticated && user?.currency === "MYR") return "RM";
+    return "$";
+  }, [isAuthenticated, user?.currency]);
+
   const formatPL = (value: number) => {
     const abs = Math.abs(value);
-    if (abs >= 1000) return `${value >= 0 ? "+" : "-"}$${(abs / 1000).toFixed(1)}k`;
-    return `${value >= 0 ? "+" : "-"}$${abs.toFixed(0)}`;
+    if (abs >= 1000) return `${value >= 0 ? "+" : "-"}${currencySymbol}${(abs / 1000).toFixed(1)}k`;
+    return `${value >= 0 ? "+" : "-"}${currencySymbol}${abs.toFixed(0)}`;
   };
 
   const formatPLFull = (value: number) => {
-    return `${value >= 0 ? "+" : ""}$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `${value >= 0 ? "+" : ""}${currencySymbol}${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatPct = (value: number) => {
