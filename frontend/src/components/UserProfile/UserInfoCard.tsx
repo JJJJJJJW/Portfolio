@@ -45,7 +45,8 @@ export default function UserInfoCard() {
     const success = await updateProfile(
       fullName,
       user?.avatarUrl || "",
-      user?.currency || "PHP"
+      user?.currency || "MYR",
+      user?.riskAppetite || "Moderate"
     );
 
     if (success) {

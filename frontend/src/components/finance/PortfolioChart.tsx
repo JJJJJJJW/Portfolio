@@ -88,7 +88,7 @@ export default function PortfolioChart({ chartData }: PortfolioChartProps) {
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-5 pt-5 dark:border-gray-800 dark:bg-gray-900/[0.9] sm:px-6 sm:pt-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-          Portfolio Value Over Time (Since 17 May 2026)
+          Portfolio Value Over Time 
         </h3>
         <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
           <button
