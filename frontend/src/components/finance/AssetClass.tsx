@@ -1,8 +1,13 @@
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import { useTheme } from "../../context/ThemeContext";
+import type { GuestAssetClassData } from "../../data/guestData";
 
-export default function AssetClass() {
+interface AssetClassProps {
+  assetClassData: GuestAssetClassData;
+}
+
+export default function AssetClass({ assetClassData }: AssetClassProps) {
   const { theme } = useTheme();
 
   const options: ApexOptions = {
@@ -17,7 +22,7 @@ export default function AssetClass() {
     theme: {
       mode: theme === "dark" ? "dark" : "light",
     },
-    labels: ["Equities", "Bonds", "Real Estate", "Cash", "Crypto"],
+    labels: assetClassData.labels,
     colors: ["#00a16cff", "#3b82f6", "#f59e0b", "#6366f1", "#8b5cf6"], // Emerald, Blue, Amber, Indigo, Violet
     legend: {
       show: true,
@@ -56,7 +61,7 @@ export default function AssetClass() {
     },
   };
 
-  const series = [45, 20, 15, 10, 10];
+  const series = assetClassData.series;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-5 pt-5 dark:border-gray-800 dark:bg-gray-900/[0.9] sm:px-6 sm:pt-6 flex flex-col h-full">

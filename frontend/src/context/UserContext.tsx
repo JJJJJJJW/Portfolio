@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { Toast } from "../components/common/Toast";
 
 export interface DbUser {
   id: string;
@@ -25,6 +26,7 @@ interface UserContextType {
   signOut: () => Promise<void>;
   updateProfile: (displayName: string, avatarUrl: string, currency: string) => Promise<boolean>;
   isAuthenticated: boolean;
+  showToast: (message: string, type?: "success" | "error" | "info") => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -35,10 +37,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<DbUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
+    setToast({ message, type });
+  };
 
   // Synchronizes the user session with our Spring Boot backend
   const syncUserWithBackend = async (currentSession: Session) => {
     try {
+      if (import.meta.env.DEV) console.log("[UserContext] Syncing session with backend.");
       const response = await fetch(`${API_URL}/api/v1/users/me`, {
         headers: {
           Authorization: `Bearer ${currentSession.access_token}`,
@@ -47,15 +55,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (response.ok) {
         const dbUserData: DbUser = await response.json();
+        if (import.meta.env.DEV) console.log("[UserContext] Sync successful! User:", dbUserData.displayName);
         setUser(dbUserData);
       } else {
-        console.error("Failed to sync user with backend:", response.statusText);
+        if (import.meta.env.DEV) console.warn("[UserContext] Failed to sync user with backend. Status:", response.status);
         setUser(null);
         setSession(null);
         localStorage.removeItem("techfolio_session");
       }
     } catch (err) {
-      console.error("Network error syncing user with backend:", err);
+      if (import.meta.env.DEV) console.error("[UserContext] Network error syncing user with backend:", err);
       setUser(null);
       setSession(null);
       localStorage.removeItem("techfolio_session");
@@ -72,7 +81,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const newSession = { access_token: supabaseSession.access_token };
         setSession(newSession);
         localStorage.setItem("techfolio_session", JSON.stringify(newSession));
+        
+        const isOAuthRedirect = window.location.hash.includes("access_token") || 
+                                window.location.search.includes("code=") ||
+                                window.location.hash.includes("id_token") ||
+                                sessionStorage.getItem("google_signin_in_progress") === "true";
+        if (isOAuthRedirect) {
+          sessionStorage.setItem("just_logged_in", "true");
+          sessionStorage.removeItem("google_signin_in_progress");
+        }
+
         await syncUserWithBackend(newSession);
+
+        if (isOAuthRedirect) {
+          showToast("Welcome! Successfully signed in with Google.", "success");
+        }
         setLoading(false);
         return;
       }
@@ -85,7 +108,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(parsedSession);
           await syncUserWithBackend(parsedSession);
         } catch (e) {
-          console.error("Failed to parse stored session:", e);
+          if (import.meta.env.DEV) console.error("Failed to parse stored session:", e);
           localStorage.removeItem("techfolio_session");
         }
       }
@@ -101,7 +124,22 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const newSession = { access_token: supabaseSession.access_token };
           setSession(newSession);
           localStorage.setItem("techfolio_session", JSON.stringify(newSession));
+
+          // Check if this was a fresh OAuth sign-in redirect to avoid scrolling on simple page reloads
+          const isOAuthRedirect = window.location.hash.includes("access_token") || 
+                                  window.location.search.includes("code=") ||
+                                  window.location.hash.includes("id_token") ||
+                                  sessionStorage.getItem("google_signin_in_progress") === "true";
+          if (isOAuthRedirect) {
+            sessionStorage.setItem("just_logged_in", "true");
+            sessionStorage.removeItem("google_signin_in_progress");
+          }
+
           await syncUserWithBackend(newSession);
+
+          if (isOAuthRedirect) {
+            showToast("Welcome! Successfully signed in with Google.", "success");
+          }
         } else if (event === "TOKEN_REFRESHED" && supabaseSession?.access_token) {
           const newSession = { access_token: supabaseSession.access_token };
           setSession(newSession);
@@ -140,14 +178,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const newSession = { access_token: token };
         setSession(newSession);
         localStorage.setItem("techfolio_session", JSON.stringify(newSession));
+        sessionStorage.setItem("just_logged_in", "true");
         await syncUserWithBackend(newSession);
+        showToast("Welcome back! Successfully signed in.", "success");
         return { success: true };
       } else {
         const errText = await response.text().catch(() => "Login failed");
         return { success: false, error: errText || `Login failed (Status: ${response.status})` };
       }
     } catch (err: any) {
-      console.error("Login request failed:", err);
+      if (import.meta.env.DEV) console.error("Login request failed:", err);
       return { success: false, error: err.message || "Network error. Please make sure the backend is running." };
     } finally {
       setLoading(false);
@@ -172,7 +212,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // onAuthStateChange listener after the redirect callback
       return { success: true };
     } catch (err: any) {
-      console.error("Google sign-in failed:", err);
+      if (import.meta.env.DEV) console.error("Google sign-in failed:", err);
       return { success: false, error: err.message || "Google sign-in failed" };
     } finally {
       setLoading(false);
@@ -197,7 +237,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: errText || `Registration failed (Status: ${response.status})` };
       }
     } catch (err: any) {
-      console.error("Registration request failed:", err);
+      if (import.meta.env.DEV) console.error("Registration request failed:", err);
       return { success: false, error: err.message || "Network error. Please make sure the backend is running." };
     } finally {
       setLoading(false);
@@ -212,8 +252,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setSession(null);
       localStorage.removeItem("techfolio_session");
+      showToast("Successfully signed out. Goodbye!", "success");
     } catch (err) {
-      console.error("Error signing out:", err);
+      if (import.meta.env.DEV) console.error("Error signing out:", err);
+      showToast("Sign out failed", "error");
     } finally {
       setLoading(false);
     }
@@ -239,7 +281,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return false;
     } catch (err) {
-      console.error("Error updating profile:", err);
+      if (import.meta.env.DEV) console.error("Error updating profile:", err);
       return false;
     }
   };
@@ -256,9 +298,17 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signOut,
         updateProfile,
         isAuthenticated: !!user,
+        showToast,
       }}
     >
       {children}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </UserContext.Provider>
   );
 };

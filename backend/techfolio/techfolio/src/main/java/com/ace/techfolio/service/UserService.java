@@ -41,12 +41,24 @@ public class UserService {
     @Transactional
     public AppUser getOrCreateUserFromJwt(Jwt jwt) {
         UUID userId = UUID.fromString(jwt.getSubject());
+        String email = jwt.getClaimAsString("email");
         
         return userRepository.findById(userId).orElseGet(() -> {
+            // Self-healing: Delete any stale user profile with the same email but different ID
+            // (e.g. created during previous attempts due to ID generation bugs)
+            if (email != null) {
+                userRepository.findByEmail(email).ifPresent(staleUser -> {
+                    if (!staleUser.getId().equals(userId)) {
+                        userRepository.delete(staleUser);
+                        userRepository.flush(); // Ensure deletion is committed before insert
+                    }
+                });
+            }
+
             // Create shadow user profile from JWT details
             AppUser newUser = new AppUser();
             newUser.setId(userId);
-            newUser.setEmail(jwt.getClaimAsString("email"));
+            newUser.setEmail(email);
             
             // Extract profile metadata provided by Google OAuth via Supabase
             Map<String, Object> userMetadata = jwt.getClaim("user_metadata");

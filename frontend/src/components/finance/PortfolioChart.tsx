@@ -1,8 +1,13 @@
 import { useState } from "react";
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
+import type { GuestChartData } from "../../data/guestData";
 
-export default function PortfolioChart() {
+interface PortfolioChartProps {
+  chartData: GuestChartData;
+}
+
+export default function PortfolioChart({ chartData }: PortfolioChartProps) {
   const [timeframe, setTimeframe] = useState<"daily" | "monthly">("monthly");
   const options: ApexOptions = {
     colors: ["#10b981"], // Emerald-500
@@ -22,20 +27,7 @@ export default function PortfolioChart() {
       width: 2,
     },
     xaxis: {
-      categories: [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ],
+      categories: timeframe === "monthly" ? chartData.monthlyCategories : chartData.dailyCategories,
       axisBorder: {
         show: false,
       },
@@ -80,20 +72,12 @@ export default function PortfolioChart() {
     },
   };
 
-  const monthlyCategories = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const dailyCategories = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  
-  options.xaxis = {
-    ...options.xaxis,
-    categories: timeframe === "monthly" ? monthlyCategories : dailyCategories,
-  };
-
   const series = [
     {
       name: "Portfolio Value",
       data: timeframe === "monthly" 
-        ? [95, 102, 105, 101, 108, 115, 112, 118, 120, 119, 122, 124.5]
-        : [122, 121.5, 123, 122.8, 124, 124.2, 124.5],
+        ? chartData.monthlySeries
+        : chartData.dailySeries,
     },
   ];
 

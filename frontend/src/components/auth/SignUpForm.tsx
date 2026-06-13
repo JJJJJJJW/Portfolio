@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useLocation } from "react-router";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
@@ -9,6 +9,7 @@ import { useUser } from "../../context/UserContext";
 export default function SignUpForm() {
   const { signUp, signInWithGoogle } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [fname, setFname] = useState("");
   const [lname, setLname] = useState("");
@@ -81,10 +82,20 @@ export default function SignUpForm() {
               onClick={async () => {
                 setIsGoogleLoading(true);
                 try {
+                  const fromPath = (location.state as any)?.from?.pathname || "/dashboard";
+                  sessionStorage.setItem("oauth_redirect_from", fromPath === "/signin" || fromPath === "/signup" ? "/dashboard" : fromPath);
+                  sessionStorage.setItem("google_signin_in_progress", "true");
+
                   const res = await signInWithGoogle();
-                  if (!res.success) setError(res.error || "Google sign-in failed");
+                  if (!res.success) {
+                    setError(res.error || "Google sign-in failed");
+                    sessionStorage.removeItem("oauth_redirect_from");
+                    sessionStorage.removeItem("google_signin_in_progress");
+                  }
                 } catch (err: any) {
                   setError(err.message || "Google sign-in failed");
+                  sessionStorage.removeItem("oauth_redirect_from");
+                  sessionStorage.removeItem("google_signin_in_progress");
                 } finally {
                   setIsGoogleLoading(false);
                 }
@@ -223,7 +234,7 @@ export default function SignUpForm() {
                 </div>
                 {/* <!-- Button --> */}
                 <div>
-                  <button 
+                  <button
                     type="submit"
                     disabled={isSubmitting}
                     className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"

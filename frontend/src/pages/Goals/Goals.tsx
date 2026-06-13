@@ -8,9 +8,10 @@ import {
   CalenderIcon,
   AngleRightIcon
 } from "../../icons";
+import { useGoalsData } from "../../hooks/useGoalsData";
 
 export default function Goals() {
-  const [goals, setGoals] = useState<FinancialGoal[]>([]);
+  const { goals, addGoal: hookAddGoal, deleteGoal: hookDeleteGoal, addContribution: hookAddContribution } = useGoalsData();
   const [isVisible, setIsVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -47,77 +48,6 @@ export default function Goals() {
     if (containerRef.current) {
       observer.observe(containerRef.current);
     }
-
-    // Default Mock Data
-    const initialGoals: FinancialGoal[] = [
-      {
-        id: "g1",
-        name: "Emergency Fund (6 Months)",
-        category: "Emergency Fund",
-        targetAmount: 15000,
-        currentAmount: 12000,
-        targetDate: "2026-10-01",
-        createdDate: "2026-01-01",
-        contributions: [
-          { id: "c1", amount: 5000, date: "2026-01-10", note: "Initial Transfer" },
-          { id: "c2", amount: 4000, date: "2026-03-05", note: "Bonus savings" },
-          { id: "c3", amount: 3000, date: "2026-05-20", note: "Monthly contribution" }
-        ]
-      },
-      {
-        id: "g2",
-        name: "Retirement Fund Core",
-        category: "Retirement",
-        targetAmount: 250000,
-        currentAmount: 85000,
-        targetDate: "2045-12-31",
-        createdDate: "2024-01-01",
-        contributions: [
-          { id: "c4", amount: 80000, date: "2025-12-31", note: "Rollover amount" },
-          { id: "c5", amount: 5000, date: "2026-04-15", note: "Yearly deposit" }
-        ]
-      },
-      {
-        id: "g3",
-        name: "Holiday Trip to Japan",
-        category: "Travel",
-        targetAmount: 6000,
-        currentAmount: 4800,
-        targetDate: "2026-07-15",
-        createdDate: "2026-01-15",
-        contributions: [
-          { id: "c6", amount: 2000, date: "2026-02-01", note: "Flight booking fund" },
-          { id: "c7", amount: 2800, date: "2026-05-10", note: "Hotel and food pocket money" }
-        ]
-      },
-      {
-        id: "g4",
-        name: "Crypto Portfolio Base",
-        category: "Investment",
-        targetAmount: 10000,
-        currentAmount: 10000,
-        targetDate: "2026-05-01",
-        createdDate: "2025-05-01",
-        contributions: [
-          { id: "c8", amount: 5000, date: "2025-08-01", note: "Buying BTC" },
-          { id: "c9", amount: 5000, date: "2026-04-20", note: "Buying ETH" }
-        ]
-      },
-      {
-        id: "g5",
-        name: "Credit Card Debt Clearance",
-        category: "Debt Payoff",
-        targetAmount: 4000,
-        currentAmount: 1200,
-        targetDate: "2026-06-30", // Coming soon, progress < 75% -> At Risk
-        createdDate: "2026-01-01",
-        contributions: [
-          { id: "c10", amount: 1200, date: "2026-02-15", note: "Tax return payout" }
-        ]
-      }
-    ];
-
-    setGoals(initialGoals);
 
     return () => observer.disconnect();
   }, []);
@@ -185,24 +115,14 @@ export default function Goals() {
       note: contribNote.trim() || undefined
     };
 
-    const updatedGoals = goals.map((g) => {
-      if (g.id === selectedGoal.id) {
-        const updatedContributions = [...g.contributions, newContribution];
-        const newCurrent = g.currentAmount + amountVal;
-        return {
-          ...g,
-          currentAmount: newCurrent,
-          contributions: updatedContributions
-        };
-      }
-      return g;
-    });
+    hookAddContribution(selectedGoal.id, newContribution);
 
-    setGoals(updatedGoals);
-
-    // Update selected goal details if it's currently open
-    const refetchedSelected = updatedGoals.find(g => g.id === selectedGoal.id) || null;
-    setSelectedGoal(refetchedSelected);
+    // Update selected goal details locally for the modal
+    setSelectedGoal(prev => prev ? {
+      ...prev,
+      currentAmount: prev.currentAmount + amountVal,
+      contributions: [...prev.contributions, newContribution]
+    } : null);
 
     // Reset Form
     setIsContributionModalOpen(false);
@@ -228,7 +148,7 @@ export default function Goals() {
       contributions: []
     };
 
-    setGoals([newGoal, ...goals]);
+    hookAddGoal(newGoal);
 
     // Reset Form
     setIsCreateModalOpen(false);
@@ -241,7 +161,7 @@ export default function Goals() {
   // Delete Goal logic
   const handleDeleteGoal = (goalId: string) => {
     if (window.confirm("Are you sure you want to delete this goal? All contribution history will be lost.")) {
-      setGoals(goals.filter((g) => g.id !== goalId));
+      hookDeleteGoal(goalId);
       setIsDetailModalOpen(false);
       setSelectedGoal(null);
     }

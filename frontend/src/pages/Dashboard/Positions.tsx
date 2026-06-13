@@ -1,47 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
 import PageMeta from "../../components/common/PageMeta";
-
-interface Position {
-  id: string;
-  name: string;
-  symbol: string;
-  quantity: number;
-  avgPrice: number;
-  currentPrice: number;
-  totalValue: number;
-  pl: number;
-}
-
-interface Transaction {
-  id: string;
-  date: string;
-  type: "buy" | "sell";
-  symbol: string;
-  quantity: number;
-  price: number;
-  totalAmount: number;
-}
+import { usePortfolioData } from "../../hooks/usePortfolioData";
+import type { GuestPosition, GuestTransaction } from "../../data/guestData";
 
 export default function Positions() {
   const [activeTab, setActiveTab] = useState("positions");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
+  const [selectedPosition, setSelectedPosition] = useState<GuestPosition | null>(null);
   const [transactionType, setTransactionType] = useState<"buy" | "sell">("buy");
   const [isVisible, setIsVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Dynamic States for Interactive Demo
-  const [positions, setPositions] = useState<Position[]>([
-    { id: "1", name: "Apple Inc.", symbol: "AAPL", quantity: 50.00, avgPrice: 150.00, currentPrice: 175.50, totalValue: 8775.00, pl: 1275.00 },
-    { id: "2", name: "Tesla", symbol: "TSLA", quantity: 20.00, avgPrice: 200.00, currentPrice: 180.20, totalValue: 3604.00, pl: -396.00 },
-    { id: "3", name: "Bitcoin", symbol: "BTC", quantity: 0.50, avgPrice: 60000.00, currentPrice: 65200.00, totalValue: 32600.00, pl: 2600.00 }
-  ]);
-
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    { id: "1", date: "2026-05-15", type: "buy", symbol: "BTC", quantity: 0.10, price: 64000.00, totalAmount: 6400.00 },
-    { id: "2", date: "2026-05-12", type: "sell", symbol: "TSLA", quantity: 5.00, price: 180.20, totalAmount: 901.00 },
-    { id: "3", date: "2026-05-10", type: "buy", symbol: "AAPL", quantity: 10.00, price: 175.50, totalAmount: 1755.00 }
-  ]);
+  // Use the portfolio data hook (guest vs auth)
+  const { positions, transactions, addTransaction } = usePortfolioData();
 
   // Form Inputs
   const [formSymbol, setFormSymbol] = useState("");
@@ -78,7 +49,7 @@ export default function Positions() {
     if (!symbolUpper || isNaN(qtyNum) || isNaN(priceNum)) return;
 
     // Create Transaction
-    const newTx: Transaction = {
+    const newTx: GuestTransaction = {
       id: Date.now().toString(),
       date: formDate,
       type: transactionType,
@@ -88,12 +59,10 @@ export default function Positions() {
       totalAmount: totalAmt
     };
 
-    setTransactions(prev => [newTx, ...prev]);
-
-    // Update Positions
-    setPositions(prevPositions => {
-      const existingIdx = prevPositions.findIndex(p => p.symbol.toUpperCase() === symbolUpper);
-      const updated = [...prevPositions];
+    // Compute updated positions
+    const updatedPositions = (() => {
+      const existingIdx = positions.findIndex(p => p.symbol.toUpperCase() === symbolUpper);
+      const updated = [...positions];
 
       if (existingIdx > -1) {
         const p = updated[existingIdx];
@@ -134,7 +103,9 @@ export default function Positions() {
         }
       }
       return updated;
-    });
+    })();
+
+    addTransaction(newTx, updatedPositions);
 
     // Reset Form
     setIsModalOpen(false);
@@ -191,44 +162,50 @@ export default function Positions() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                  <thead className="text-xs text-gray-500 uppercase border-b border-gray-200 dark:border-gray-800 dark:text-gray-500">
-                    <tr>
-                      <th className="px-4 py-3 font-semibold">Asset</th>
-                      <th className="px-4 py-3 font-semibold text-right">Quantity</th>
-                      <th className="px-4 py-3 font-semibold text-right">Avg Price</th>
-                      <th className="px-4 py-3 font-semibold text-right">Current Price</th>
-                      <th className="px-4 py-3 font-semibold text-right">Total Value</th>
-                      <th className="px-4 py-3 font-semibold text-right">P/L</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {positions.map((pos, idx) => (
-                      <tr
-                        key={pos.id}
-                        onClick={() => setSelectedPosition(pos)}
-                        className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer ${
-                          idx === positions.length - 1 ? "border-b-0" : ""
-                        }`}
-                      >
-                        <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">
-                          {pos.name} ({pos.symbol})
-                        </td>
-                        <td className="px-4 py-4 text-right">{pos.quantity.toFixed(2)}</td>
-                        <td className="px-4 py-4 text-right">${pos.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td className="px-4 py-4 text-right">${pos.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td className="px-4 py-4 text-right font-medium text-gray-900 dark:text-white">
-                          ${pos.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-                        <td className={`px-4 py-4 text-right font-medium ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
-                          {pos.pl >= 0 ? "+" : ""}${pos.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
+              {positions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <p className="text-gray-400 dark:text-gray-500 text-sm font-medium">No positions yet. Add a transaction to get started.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                    <thead className="text-xs text-gray-500 uppercase border-b border-gray-200 dark:border-gray-800 dark:text-gray-500">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold">Asset</th>
+                        <th className="px-4 py-3 font-semibold text-right">Quantity</th>
+                        <th className="px-4 py-3 font-semibold text-right">Avg Price</th>
+                        <th className="px-4 py-3 font-semibold text-right">Current Price</th>
+                        <th className="px-4 py-3 font-semibold text-right">Total Value</th>
+                        <th className="px-4 py-3 font-semibold text-right">P/L</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {positions.map((pos, idx) => (
+                        <tr
+                          key={pos.id}
+                          onClick={() => setSelectedPosition(pos)}
+                          className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer ${
+                            idx === positions.length - 1 ? "border-b-0" : ""
+                          }`}
+                        >
+                          <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">
+                            {pos.name} ({pos.symbol})
+                          </td>
+                          <td className="px-4 py-4 text-right">{pos.quantity.toFixed(2)}</td>
+                          <td className="px-4 py-4 text-right">${pos.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                          <td className="px-4 py-4 text-right">${pos.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                          <td className="px-4 py-4 text-right font-medium text-gray-900 dark:text-white">
+                            ${pos.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td className={`px-4 py-4 text-right font-medium ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                            {pos.pl >= 0 ? "+" : ""}${pos.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -238,49 +215,55 @@ export default function Positions() {
                 <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">Transaction History</h2>
               </div>
 
-              <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                  <thead className="text-xs text-gray-500 uppercase border-b border-gray-200 dark:border-gray-800 dark:text-gray-500">
-                    <tr>
-                      <th className="px-4 py-3 font-semibold">Date</th>
-                      <th className="px-4 py-3 font-semibold">Type</th>
-                      <th className="px-4 py-3 font-semibold">Asset</th>
-                      <th className="px-4 py-3 font-semibold text-right">Quantity</th>
-                      <th className="px-4 py-3 font-semibold text-right">Price</th>
-                      <th className="px-4 py-3 font-semibold text-right">Total Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {transactions.map((tx, idx) => (
-                      <tr
-                        key={tx.id}
-                        className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
-                          idx === transactions.length - 1 ? "border-b-0" : ""
-                        }`}
-                      >
-                        <td className="px-4 py-4">{tx.date}</td>
-                        <td className="px-4 py-4">
-                          {tx.type === "buy" ? (
-                            <span className="inline-flex items-center rounded-full bg-brand-500/10 px-2 py-1 text-xs font-medium text-brand-500 ring-1 ring-inset ring-brand-500/20">
-                              Buy
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center rounded-full bg-red-500/10 px-2 py-1 text-xs font-medium text-red-500 ring-1 ring-inset ring-red-500/20">
-                              Sell
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">{tx.symbol}</td>
-                        <td className="px-4 py-4 text-right">{tx.quantity.toFixed(4).replace(/\.?0+$/, "")}</td>
-                        <td className="px-4 py-4 text-right">${tx.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                        <td className="px-4 py-4 text-right font-medium text-gray-900 dark:text-white">
-                          ${tx.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </td>
+              {transactions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <p className="text-gray-400 dark:text-gray-500 text-sm font-medium">No transactions yet. Add your first transaction to get started.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                    <thead className="text-xs text-gray-500 uppercase border-b border-gray-200 dark:border-gray-800 dark:text-gray-500">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold">Date</th>
+                        <th className="px-4 py-3 font-semibold">Type</th>
+                        <th className="px-4 py-3 font-semibold">Asset</th>
+                        <th className="px-4 py-3 font-semibold text-right">Quantity</th>
+                        <th className="px-4 py-3 font-semibold text-right">Price</th>
+                        <th className="px-4 py-3 font-semibold text-right">Total Amount</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {transactions.map((tx, idx) => (
+                        <tr
+                          key={tx.id}
+                          className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
+                            idx === transactions.length - 1 ? "border-b-0" : ""
+                          }`}
+                        >
+                          <td className="px-4 py-4">{tx.date}</td>
+                          <td className="px-4 py-4">
+                            {tx.type === "buy" ? (
+                              <span className="inline-flex items-center rounded-full bg-brand-500/10 px-2 py-1 text-xs font-medium text-brand-500 ring-1 ring-inset ring-brand-500/20">
+                                Buy
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full bg-red-500/10 px-2 py-1 text-xs font-medium text-red-500 ring-1 ring-inset ring-red-500/20">
+                                Sell
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">{tx.symbol}</td>
+                          <td className="px-4 py-4 text-right">{tx.quantity.toFixed(4).replace(/\.?0+$/, "")}</td>
+                          <td className="px-4 py-4 text-right">${tx.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                          <td className="px-4 py-4 text-right font-medium text-gray-900 dark:text-white">
+                            ${tx.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>

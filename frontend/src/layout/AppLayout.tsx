@@ -1,33 +1,84 @@
 import { SidebarProvider, useSidebar } from "../context/SidebarContext";
-import { Outlet, useLocation } from "react-router";
-import React, { useEffect } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router";
+import React, { useEffect, useRef } from "react";
 import AppHeader from "./AppHeader";
 import Backdrop from "./Backdrop";
 import AppSidebar from "./AppSidebar";
 import ColorBends from "../components/ColorBends.tsx";
 import LandingPage from "../pages/LandingPage";
 import { useTheme } from "../context/ThemeContext";
+import { useUser } from "../context/UserContext";
+import GuestBanner from "../components/common/GuestBanner";
 
 const LayoutContent: React.FC = () => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
   const location = useLocation();
+  const navigate = useNavigate();
   const { theme } = useTheme();
+  const { isAuthenticated } = useUser();
   const isDashboardRoot = location.pathname === '/dashboard';
+  const prevAuthRef = useRef(isAuthenticated);
+  // Show landing page on the dashboard route for all users (guests and authenticated)
+  const showLandingPage = isDashboardRoot;
 
   useEffect(() => {
-    if (location.state && (location.state as any).scrollToOverview) {
-      setTimeout(() => {
-        document.getElementById('dashboard-content')?.scrollIntoView({ behavior: 'smooth' });
-      }, 50);
-
-      // Clean up state so a simple page refresh doesn't trigger scroll again
-      window.history.replaceState({}, document.title);
+    // Scroll smoothly back to top (landing page) on logout
+    if (prevAuthRef.current && !isAuthenticated) {
+      const container = document.getElementById('main-scroll-container');
+      if (container) {
+        container.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      }
     }
-  }, [location]);
+    prevAuthRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    const oauthRedirectFrom = sessionStorage.getItem("oauth_redirect_from");
+    if (oauthRedirectFrom) {
+      sessionStorage.removeItem("oauth_redirect_from");
+      if (oauthRedirectFrom !== "/dashboard" && oauthRedirectFrom !== "/signin" && oauthRedirectFrom !== "/signup") {
+        navigate(oauthRedirectFrom, { replace: true });
+      }
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    const justLoggedIn = sessionStorage.getItem("just_logged_in") === "true" ||
+      (location.state && (location.state as any).scrollToOverview);
+
+    if (justLoggedIn) {
+      setTimeout(() => {
+        const container = document.getElementById('main-scroll-container');
+        const dashboard = document.getElementById('dashboard-content');
+
+        if (container && dashboard) {
+          const targetTop = dashboard.offsetTop || container.clientHeight || window.innerHeight;
+          
+          if (targetTop > 0) {
+            // Temporarily disable smooth scroll to jump instantly
+            const originalBehavior = container.style.scrollBehavior;
+            container.style.scrollBehavior = 'auto';
+            
+            container.scrollTop = targetTop;
+            
+            // Restore smooth scroll behavior
+            container.style.scrollBehavior = originalBehavior;
+            
+            // Clear flags
+            sessionStorage.removeItem("just_logged_in");
+            window.history.replaceState({}, document.title);
+          }
+        }
+      }, 100); // Wait 100ms for DOM layout to settle
+    }
+  }, [location, isAuthenticated]);
 
   useEffect(() => {
     const container = document.getElementById('main-scroll-container');
-    if (!container || !isDashboardRoot) return;
+    if (!container || !showLandingPage) return;
 
     let isScrolling = false;
     let scrollTimeout: NodeJS.Timeout;
@@ -62,7 +113,7 @@ const LayoutContent: React.FC = () => {
 
     container.addEventListener('wheel', handleWheel, { passive: false });
     return () => container.removeEventListener('wheel', handleWheel);
-  }, [isDashboardRoot]);
+  }, [showLandingPage]);
 
   return (
     <div className="relative h-screen flex flex-col overflow-y-auto scroll-smooth  text-slate-200 dark:bg-transparent dark:text-inherit" id="main-scroll-container">
@@ -87,7 +138,7 @@ const LayoutContent: React.FC = () => {
 
       </div>
 
-      {isDashboardRoot && (
+      {showLandingPage && (
         <div id="landing-page" className="relative z-20 w-full min-h-screen snap-start shrink-0">
           <LandingPage />
         </div>
@@ -104,6 +155,7 @@ const LayoutContent: React.FC = () => {
         >
           <AppHeader />
           <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+            <GuestBanner />
             <Outlet />
           </div>
         </div>

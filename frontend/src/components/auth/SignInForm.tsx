@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useLocation } from "react-router";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
@@ -10,6 +10,7 @@ import { useUser } from "../../context/UserContext";
 export default function SignInForm() {
   const { signIn, signInWithGoogle } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -22,13 +23,21 @@ export default function SignInForm() {
     setError(null);
     setIsGoogleLoading(true);
     try {
+      const fromPath = (location.state as any)?.from?.pathname || "/dashboard";
+      sessionStorage.setItem("oauth_redirect_from", fromPath === "/signin" || fromPath === "/signup" ? "/dashboard" : fromPath);
+      sessionStorage.setItem("google_signin_in_progress", "true");
+
       const res = await signInWithGoogle();
       if (!res.success) {
         setError(res.error || "Google sign-in failed");
+        sessionStorage.removeItem("oauth_redirect_from");
+        sessionStorage.removeItem("google_signin_in_progress");
       }
       // If successful, the browser redirects to Google
     } catch (err: any) {
       setError(err.message || "Google sign-in failed");
+      sessionStorage.removeItem("oauth_redirect_from");
+      sessionStorage.removeItem("google_signin_in_progress");
     } finally {
       setIsGoogleLoading(false);
     }
@@ -42,7 +51,11 @@ export default function SignInForm() {
     try {
       const res = await signIn(email, password);
       if (res.success) {
-        navigate("/dashboard");
+        let fromPath = (location.state as any)?.from?.pathname || "/dashboard";
+        if (fromPath === "/signin" || fromPath === "/signup") {
+          fromPath = "/dashboard";
+        }
+        navigate(fromPath, { state: { scrollToOverview: true } });
       } else {
         setError(res.error || "Invalid credentials");
       }
@@ -133,9 +146,9 @@ export default function SignInForm() {
                   <Label>
                     Email <span className="text-error-500">*</span>{" "}
                   </Label>
-                  <Input 
-                    type="email" 
-                    placeholder="info@gmail.com" 
+                  <Input
+                    type="email"
+                    placeholder="info@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
