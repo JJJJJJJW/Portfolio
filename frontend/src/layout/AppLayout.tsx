@@ -28,6 +28,7 @@ const LayoutContent: React.FC = () => {
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [setupCurrency, setSetupCurrency] = useState("USD");
   const [setupRisk, setSetupRisk] = useState("Moderate");
+  const [isOnLandingPage, setIsOnLandingPage] = useState(showLandingPage);
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -147,6 +148,25 @@ const LayoutContent: React.FC = () => {
     return () => container.removeEventListener('wheel', handleWheel);
   }, [showLandingPage]);
 
+  useEffect(() => {
+    const container = document.getElementById('main-scroll-container');
+    if (!container) return;
+
+    const handleScroll = () => {
+      if (!showLandingPage) {
+        setIsOnLandingPage(false);
+        return;
+      }
+      setIsOnLandingPage(container.scrollTop < window.innerHeight / 2);
+    };
+
+    handleScroll();
+    container.addEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, [showLandingPage]);
+
   return (
     <div className="relative h-screen flex flex-col overflow-y-auto scroll-smooth  text-slate-200 dark:bg-transparent dark:text-inherit" id="main-scroll-container">
       <div className="fixed inset-0 z-0">
@@ -177,7 +197,7 @@ const LayoutContent: React.FC = () => {
       )}
 
       <div id="dashboard-content" className="relative z-10 flex w-full flex-1 snap-start shrink-0 min-h-screen">
-        <div className="sticky top-0 h-screen w-0 z-50">
+        <div className={`sticky top-0 h-screen w-0 z-50 transition-opacity duration-300 ${isOnLandingPage ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
           <AppSidebar />
           <Backdrop />
         </div>

@@ -3,6 +3,7 @@ package com.ace.techfolio.controller;
 import com.ace.techfolio.dto.AssetRequest;
 import com.ace.techfolio.dto.AssetResponse;
 import com.ace.techfolio.service.AssetService;
+import com.ace.techfolio.service.MarketDataService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -29,9 +31,25 @@ import java.util.UUID;
 public class AssetController {
 
     private final AssetService assetService;
+    private final MarketDataService marketDataService;
 
-    public AssetController(AssetService assetService) {
+    public AssetController(AssetService assetService, MarketDataService marketDataService) {
         this.assetService = assetService;
+        this.marketDataService = marketDataService;
+    }
+
+    /**
+     * Fetch the live asset price from Twelve Data or Yahoo Finance (via MarketDataRouter).
+     * Publicly accessible as defined in SecurityConfig.
+     */
+    @GetMapping("/price")
+    public ResponseEntity<Double> getAssetPrice(@RequestParam String symbol) {
+        if (symbol == null || symbol.isBlank()) {
+            return ResponseEntity.ok(0.0);
+        }
+        Double price = marketDataService.getBatchPrices(List.of(symbol))
+                .getOrDefault(symbol.trim().toUpperCase(), 0.0);
+        return ResponseEntity.ok(price);
     }
 
     /**

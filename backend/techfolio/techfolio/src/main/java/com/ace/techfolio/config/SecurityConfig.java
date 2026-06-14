@@ -62,10 +62,12 @@ public class SecurityConfig {
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(Customizer.withDefaults()))
 
-                // 4. Secure api endpoints (except health and auth endpoints)
+                // 4. Secure api endpoints (except health, auth, and public market data endpoints)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/health").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/assets/price").permitAll()
+                        .requestMatchers("/api/v1/market/**").permitAll()
                         .requestMatchers("/api/v1/users/me").authenticated()
                         .anyRequest().authenticated());
 

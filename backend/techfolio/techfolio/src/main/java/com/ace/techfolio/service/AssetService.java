@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -24,20 +25,31 @@ public class AssetService {
 
     private final AssetRepository assetRepository;
     private final UserRepository userRepository;
+    private final MarketDataService marketDataService;
 
-    public AssetService(AssetRepository assetRepository, UserRepository userRepository) {
+    public AssetService(AssetRepository assetRepository, UserRepository userRepository, MarketDataService marketDataService) {
         this.assetRepository = assetRepository;
         this.userRepository = userRepository;
+        this.marketDataService = marketDataService;
     }
 
     /**
-     * Returns all assets for a specific user.
+     * Returns all assets for a specific user, with current prices resolved on-the-fly.
      */
     @Transactional(readOnly = true)
     public List<AssetResponse> getAssetsByUser(UUID userId) {
-        return assetRepository.findByUserIdOrderByCreatedAtDesc(userId)
-                .stream()
-                .map(this::toResponse)
+        List<Asset> assets = assetRepository.findByUserIdOrderByCreatedAtDesc(userId);
+
+        List<String> symbols = assets.stream()
+                .map(Asset::getSymbol)
+                .filter(s -> s != null && !s.isBlank())
+                .distinct()
+                .toList();
+
+        Map<String, Double> livePrices = marketDataService.getBatchPrices(symbols);
+
+        return assets.stream()
+                .map(asset -> toResponse(asset, livePrices))
                 .toList();
     }
 
@@ -98,15 +110,27 @@ public class AssetService {
     // =========================================================================
 
     private AssetResponse toResponse(Asset asset) {
+        return toResponse(asset, Map.of());
+    }
+
+    private AssetResponse toResponse(Asset asset, Map<String, Double> livePrices) {
+        BigDecimal currentPrice = asset.getCurrentPrice();
+        if (asset.getSymbol() != null && livePrices.containsKey(asset.getSymbol().toUpperCase())) {
+            Double livePrice = livePrices.get(asset.getSymbol().toUpperCase());
+            if (livePrice != null && livePrice > 0.0) {
+                currentPrice = BigDecimal.valueOf(livePrice);
+            }
+        }
+
         BigDecimal totalValue = BigDecimal.ZERO;
         BigDecimal pl = BigDecimal.ZERO;
 
-        if (asset.getQuantity() != null && asset.getCurrentPrice() != null) {
-            totalValue = asset.getQuantity().multiply(asset.getCurrentPrice());
+        if (asset.getQuantity() != null && currentPrice != null) {
+            totalValue = asset.getQuantity().multiply(currentPrice);
         }
-        if (asset.getQuantity() != null && asset.getCurrentPrice() != null && asset.getAvgPrice() != null) {
+        if (asset.getQuantity() != null && currentPrice != null && asset.getAvgPrice() != null) {
             pl = asset.getQuantity().multiply(
-                    asset.getCurrentPrice().subtract(asset.getAvgPrice())
+                    currentPrice.subtract(asset.getAvgPrice())
             ).setScale(2, RoundingMode.HALF_UP);
         }
 
@@ -117,7 +141,7 @@ public class AssetService {
                 asset.getCategory() != null ? asset.getCategory().name() : null,
                 asset.getQuantity(),
                 asset.getAvgPrice(),
-                asset.getCurrentPrice(),
+                currentPrice != null ? currentPrice.setScale(2, RoundingMode.HALF_UP) : null,
                 totalValue.setScale(2, RoundingMode.HALF_UP),
                 pl
         );

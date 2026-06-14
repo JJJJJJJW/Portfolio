@@ -15,6 +15,7 @@ interface UsePortfolioDataReturn {
   setPositions: React.Dispatch<React.SetStateAction<GuestPosition[]>>;
   setTransactions: React.Dispatch<React.SetStateAction<GuestTransaction[]>>;
   addTransaction: (tx: GuestTransaction, updatedPositions: GuestPosition[]) => void;
+  refetch: () => Promise<void>;
   isGuest: boolean;
   loading: boolean;
 }
@@ -32,7 +33,7 @@ export function usePortfolioData(): UsePortfolioDataReturn {
   const [transactions, setTransactions] = useState<GuestTransaction[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
     if (isGuest) {
       // Deep clone guest data so mutations don't affect the constants
       setPositions(JSON.parse(JSON.stringify(GUEST_POSITIONS)));
@@ -41,64 +42,63 @@ export function usePortfolioData(): UsePortfolioDataReturn {
       return;
     }
 
-    // Authenticated: fetch from backend
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const headers: Record<string, string> = {
-          Authorization: `Bearer ${session?.access_token}`,
-        };
+    setLoading(true);
+    try {
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${session?.access_token}`,
+      };
 
-        const [assetsRes, txRes] = await Promise.all([
-          fetch(`${API_URL}/api/v1/assets`, { headers }),
-          fetch(`${API_URL}/api/v1/transactions`, { headers }),
-        ]);
+      const [assetsRes, txRes] = await Promise.all([
+        fetch(`${API_URL}/api/v1/assets`, { headers }),
+        fetch(`${API_URL}/api/v1/transactions`, { headers }),
+      ]);
 
-        if (assetsRes.ok) {
-          const assetsData = await assetsRes.json();
-          setPositions(
-            assetsData.map((a: Record<string, unknown>) => ({
-              id: a.id as string,
-              name: a.name as string,
-              symbol: a.symbol as string,
-              quantity: Number(a.quantity),
-              avgPrice: Number(a.avgPrice),
-              currentPrice: Number(a.currentPrice),
-              totalValue: Number(a.totalValue),
-              pl: Number(a.pl),
-            }))
-          );
-        } else {
-          setPositions([]);
-        }
-
-        if (txRes.ok) {
-          const txData = await txRes.json();
-          setTransactions(
-            txData.map((t: Record<string, unknown>) => ({
-              id: t.id as string,
-              date: t.date as string,
-              type: t.type as "buy" | "sell",
-              symbol: t.symbol as string,
-              quantity: Number(t.quantity),
-              price: Number(t.price),
-              totalAmount: Number(t.totalAmount),
-            }))
-          );
-        } else {
-          setTransactions([]);
-        }
-      } catch (err) {
-        console.error("Failed to fetch portfolio data:", err);
+      if (assetsRes.ok) {
+        const assetsData = await assetsRes.json();
+        setPositions(
+          assetsData.map((a: Record<string, unknown>) => ({
+            id: a.id as string,
+            name: a.name as string,
+            symbol: a.symbol as string,
+            quantity: Number(a.quantity),
+            avgPrice: Number(a.avgPrice),
+            currentPrice: Number(a.currentPrice),
+            totalValue: Number(a.totalValue),
+            pl: Number(a.pl),
+          }))
+        );
+      } else {
         setPositions([]);
-        setTransactions([]);
-      } finally {
-        setLoading(false);
       }
-    };
 
-    fetchData();
+      if (txRes.ok) {
+        const txData = await txRes.json();
+        setTransactions(
+          txData.map((t: Record<string, unknown>) => ({
+            id: t.id as string,
+            date: t.date as string,
+            type: t.type as "buy" | "sell",
+            symbol: t.symbol as string,
+            quantity: Number(t.quantity),
+            price: Number(t.price),
+            totalAmount: Number(t.totalAmount),
+          }))
+        );
+      } else {
+        setTransactions([]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch portfolio data:", err);
+      setPositions([]);
+      setTransactions([]);
+    } finally {
+      setLoading(false);
+    }
   }, [isGuest, session?.access_token]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const addTransaction = useCallback(
     (tx: GuestTransaction, updatedPositions: GuestPosition[]) => {
@@ -185,5 +185,5 @@ export function usePortfolioData(): UsePortfolioDataReturn {
     [isGuest, session?.access_token]
   );
 
-  return { positions, transactions, setPositions, setTransactions, addTransaction, isGuest, loading };
+  return { positions, transactions, setPositions, setTransactions, addTransaction, refetch: fetchData, isGuest, loading };
 }
