@@ -65,9 +65,11 @@ public class SecurityConfig {
                 // 4. Secure api endpoints (except health, auth, and public market data endpoints)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/health").permitAll()
+                        .requestMatchers("/api/v1/ping").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/assets/price").permitAll()
                         .requestMatchers("/api/v1/market/**").permitAll()
+                        .requestMatchers("/api/v1/cron/**").permitAll()
                         .requestMatchers("/api/v1/users/me").authenticated()
                         .anyRequest().authenticated());
 
@@ -92,13 +94,9 @@ public class SecurityConfig {
             ResponseEntity<String> response = restTemplate.exchange(
                     jwksUri, HttpMethod.GET, entity, String.class);
 
-            log.info("JWKS response status: {}", response.getStatusCode());
-            log.debug("JWKS body: {}", response.getBody());
-
             // Parse the JWK set from the response
             JWKSet jwkSet = JWKSet.parse(response.getBody());
-            log.info("Parsed {} key(s) from JWKS", jwkSet.getKeys().size());
-
+            
             // Build a JWT processor that uses the fetched keys for ES256 verification
             ImmutableJWKSet<SecurityContext> jwkSource = new ImmutableJWKSet<>(jwkSet);
             DefaultJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
@@ -133,7 +131,7 @@ public class SecurityConfig {
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
 
         // Allow standard headers (important for Authorization: Bearer <token>)
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "X-Cron-Secret"));
         configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
 

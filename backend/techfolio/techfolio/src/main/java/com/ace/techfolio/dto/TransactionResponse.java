@@ -14,5 +14,9 @@ public record TransactionResponse(
         String symbol,
         BigDecimal quantity,
         BigDecimal price,
-        BigDecimal totalAmount
+        BigDecimal totalAmount,
+        String currency,
+        String category,
+        Boolean isCustom,
+        BigDecimal customExchangeRate
 ) {}

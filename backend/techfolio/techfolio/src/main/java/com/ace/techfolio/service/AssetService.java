@@ -41,6 +41,7 @@ public class AssetService {
         List<Asset> assets = assetRepository.findByUserIdOrderByCreatedAtDesc(userId);
 
         List<String> symbols = assets.stream()
+                .filter(a -> !a.isCustom())
                 .map(Asset::getSymbol)
                 .filter(s -> s != null && !s.isBlank())
                 .distinct()
@@ -70,6 +71,7 @@ public class AssetService {
         asset.setAvgPrice(request.avgPrice());
         asset.setCurrentPrice(request.currentPrice());
         asset.setCurrentValue(request.quantity().multiply(request.currentPrice()));
+        asset.setCurrency(isBursa(request.symbol()) ? "MYR" : "USD");
 
         Asset saved = assetRepository.save(asset);
         return toResponse(saved);
@@ -90,6 +92,7 @@ public class AssetService {
         asset.setAvgPrice(request.avgPrice());
         asset.setCurrentPrice(request.currentPrice());
         asset.setCurrentValue(request.quantity().multiply(request.currentPrice()));
+        asset.setCurrency(isBursa(request.symbol()) ? "MYR" : "USD");
 
         Asset saved = assetRepository.save(asset);
         return toResponse(saved);
@@ -115,7 +118,8 @@ public class AssetService {
 
     private AssetResponse toResponse(Asset asset, Map<String, Double> livePrices) {
         BigDecimal currentPrice = asset.getCurrentPrice();
-        if (asset.getSymbol() != null && livePrices.containsKey(asset.getSymbol().toUpperCase())) {
+        boolean isCustom = asset.isCustom();
+        if (!isCustom && asset.getSymbol() != null && livePrices.containsKey(asset.getSymbol().toUpperCase())) {
             Double livePrice = livePrices.get(asset.getSymbol().toUpperCase());
             if (livePrice != null && livePrice > 0.0) {
                 currentPrice = BigDecimal.valueOf(livePrice);
@@ -143,8 +147,29 @@ public class AssetService {
                 asset.getAvgPrice(),
                 currentPrice != null ? currentPrice.setScale(2, RoundingMode.HALF_UP) : null,
                 totalValue.setScale(2, RoundingMode.HALF_UP),
-                pl
+                pl,
+                isCustom,
+                asset.getCurrency()
         );
+    }
+
+    /**
+     * Updates only the current price and value of a custom asset position.
+     */
+    @Transactional
+    public AssetResponse updateAssetPrice(UUID userId, UUID assetId, BigDecimal newPrice) {
+        Asset asset = assetRepository.findByIdAndUserId(assetId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("Asset not found or access denied"));
+
+        asset.setCurrentPrice(newPrice);
+        if (asset.getQuantity() != null) {
+            asset.setCurrentValue(asset.getQuantity().multiply(newPrice));
+        } else {
+            asset.setCurrentValue(BigDecimal.ZERO);
+        }
+
+        Asset saved = assetRepository.save(asset);
+        return toResponse(saved);
     }
 
     private AssetCategory parseCategory(String category) {
@@ -156,5 +181,11 @@ public class AssetService {
         } catch (IllegalArgumentException e) {
             return AssetCategory.OTHER;
         }
+    }
+
+    private boolean isBursa(String symbol) {
+        if (symbol == null) return false;
+        String s = symbol.trim().toUpperCase();
+        return s.endsWith(".KL") || s.endsWith(".KLSE") || s.endsWith(".XKLS");
     }
 }

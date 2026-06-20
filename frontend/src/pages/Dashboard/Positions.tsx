@@ -3,6 +3,7 @@ import PageMeta from "../../components/common/PageMeta";
 import { usePortfolioData } from "../../hooks/usePortfolioData";
 import type { GuestPosition, GuestTransaction } from "../../data/guestData";
 import { Toast } from "../../components/common/Toast";
+import AutocompleteSearch from "../../components/common/AutocompleteSearch";
 
 const isKlse = (symbol: string) => {
   const s = symbol.trim().toUpperCase();
@@ -18,7 +19,12 @@ export default function Positions() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Use the portfolio data hook (guest vs auth)
-  const { positions, transactions, addTransaction, refetch } = usePortfolioData();
+  const { positions, transactions, addTransaction, refetch, updateAssetPrice } = usePortfolioData();
+
+  // Price Edit states for Custom Assets
+  const [isEditingPrice, setIsEditingPrice] = useState(false);
+  const [tempPrice, setTempPrice] = useState("");
+  const [isPriceSubmitting, setIsPriceSubmitting] = useState(false);
 
   // Form Inputs
   const [formSymbol, setFormSymbol] = useState("");
@@ -26,21 +32,81 @@ export default function Positions() {
   const [formPrice, setFormPrice] = useState("");
   const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
   const [formError, setFormError] = useState("");
+  const [formCurrency, setFormCurrency] = useState<"USD" | "MYR">("USD");
+  const [isManualCurrency, setIsManualCurrency] = useState(false);
+  const [formCategory, setFormCategory] = useState("STOCK");
+  const [formIsCustom, setFormIsCustom] = useState(false);
+  const [formCurrentPrice, setFormCurrentPrice] = useState("");
+  const [formUseCustomFx, setFormUseCustomFx] = useState(false);
+  const [formCustomFxRate, setFormCustomFxRate] = useState("");
 
   useEffect(() => {
     setFormError("");
   }, [formSymbol, formQty, formPrice, transactionType]);
 
+  useEffect(() => {
+    if (!isManualCurrency && formSymbol) {
+      setFormCurrency(isKlse(formSymbol) ? "MYR" : "USD");
+    }
+  }, [formSymbol, isManualCurrency]);
+
+  useEffect(() => {
+    if (formSymbol) {
+      const s = formSymbol.trim().toUpperCase();
+      if (s.includes("/") || s.endsWith("USD") || ["BTC", "ETH", "SOL", "DOGE"].includes(s)) {
+        setFormCategory("CRYPTO");
+      } else {
+        setFormCategory("STOCK");
+      }
+    }
+  }, [formSymbol]);
+
+  useEffect(() => {
+    setIsEditingPrice(false);
+    setTempPrice("");
+  }, [selectedPosition]);
+
+  const handleSavePrice = async () => {
+    if (!selectedPosition) return;
+    const priceNum = parseFloat(tempPrice);
+    if (isNaN(priceNum) || priceNum < 0) return;
+
+    setIsPriceSubmitting(true);
+    try {
+      await updateAssetPrice(selectedPosition.id, priceNum);
+      setSelectedPosition((prev) => {
+        if (!prev) return null;
+        const totalValue = prev.quantity * priceNum;
+        const pl = totalValue - (prev.quantity * prev.avgPrice);
+        return {
+          ...prev,
+          currentPrice: priceNum,
+          totalValue: parseFloat(totalValue.toFixed(2)),
+          pl: parseFloat(pl.toFixed(2))
+        };
+      });
+      setIsEditingPrice(false);
+    } catch (err) {
+      console.error("Failed to save custom asset price:", err);
+    } finally {
+      setIsPriceSubmitting(false);
+    }
+  };
+
   const handleSellFromDetails = (pos: GuestPosition) => {
     setFormSymbol(pos.symbol);
     setFormPrice(pos.currentPrice.toFixed(2));
     setTransactionType("sell");
+    setFormCurrency(pos.currency || "USD");
+    setIsManualCurrency(true);
+    setFormCategory(pos.category || "STOCK");
     setIsModalOpen(true);
     setSelectedPosition(null);
   };
 
   const [selectedCurrency, setSelectedCurrency] = useState<"USD" | "MYR">("USD");
   const [usdToMyrRate, setUsdToMyrRate] = useState<number>(4.70);
+  const [usdToMyrFetchedAt, setUsdToMyrFetchedAt] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
@@ -48,11 +114,12 @@ export default function Positions() {
 
   const fetchExchangeRate = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/api/v1/assets/price?symbol=USD/MYR`);
+      const res = await fetch(`${API_URL}/api/v1/market/exchange-rate?symbol=USD/MYR`);
       if (res.ok) {
-        const price = await res.json();
-        if (price > 0) {
-          setUsdToMyrRate(price);
+        const data = await res.json();
+        if (data && data.rate > 0) {
+          setUsdToMyrRate(data.rate);
+          setUsdToMyrFetchedAt(data.fetchedAt);
         }
       }
     } catch (err) {
@@ -103,8 +170,8 @@ export default function Positions() {
   };
 
   // Separate positions by currency
-  const rmPositions = positions.filter(p => isKlse(p.symbol));
-  const usdPositions = positions.filter(p => !isKlse(p.symbol));
+  const rmPositions = positions.filter(p => p.currency === "MYR");
+  const usdPositions = positions.filter(p => p.currency === "USD");
 
   // Compute Subtotals
   const rmTotalValue = rmPositions.reduce((sum, p) => sum + p.totalValue, 0);
@@ -122,96 +189,7 @@ export default function Positions() {
     ? usdTotalPl + (rmTotalPl / usdToMyrRate)
     : (usdTotalPl * usdToMyrRate) + rmTotalPl;
 
-  // Ticker Search States & Logic
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResult, setSearchResult] = useState<{
-    symbol: string;
-    price: number;
-    hasPosition: boolean;
-    positionDetails?: {
-      quantity: number;
-      avgPrice: number;
-      totalValue: number;
-      pl: number;
-    };
-  } | null>(null);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState("");
 
-  const triggerSearch = useCallback(async (symbol: string) => {
-    const symbolUpper = symbol.trim().toUpperCase();
-    if (!symbolUpper) return;
-
-    setSearchLoading(true);
-    setSearchError("");
-
-    try {
-      const res = await fetch(`${API_URL}/api/v1/assets/price?symbol=${symbolUpper}`);
-      if (!res.ok) {
-        throw new Error("Symbol not found or network error");
-      }
-      const price = await res.json();
-      if (price === 0.0) {
-        throw new Error("Symbol not found or API limits exceeded");
-      }
-
-      const matchedPos = positions.find(p => p.symbol.toUpperCase() === symbolUpper);
-
-      if (matchedPos) {
-        setSearchResult({
-          symbol: symbolUpper,
-          price: price,
-          hasPosition: true,
-          positionDetails: {
-            quantity: matchedPos.quantity,
-            avgPrice: matchedPos.avgPrice,
-            totalValue: matchedPos.quantity * price,
-            pl: (price - matchedPos.avgPrice) * matchedPos.quantity
-          }
-        });
-      } else {
-        setSearchResult({
-          symbol: symbolUpper,
-          price: price,
-          hasPosition: false
-        });
-      }
-    } catch (err: any) {
-      console.error("Search failed:", err);
-      setSearchError(err.message || "Failed to load price. Verify symbol or API key.");
-      setSearchResult(null);
-    } finally {
-      setSearchLoading(false);
-    }
-  }, [API_URL, positions]);
-
-  const handleSearchTicker = (e: React.FormEvent) => {
-    e.preventDefault();
-    triggerSearch(searchQuery);
-  };
-
-  useEffect(() => {
-    const query = searchQuery.trim();
-    if (query.length < 2) {
-      setSearchResult(null);
-      setSearchError("");
-      return;
-    }
-
-    const delayDebounce = setTimeout(() => {
-      triggerSearch(query);
-    }, 1000);
-
-    return () => clearTimeout(delayDebounce);
-  }, [searchQuery, triggerSearch]);
-
-  const handleAddFromSearch = () => {
-    if (!searchResult) return;
-    setFormSymbol(searchResult.symbol);
-    setFormPrice(searchResult.price.toFixed(2));
-    setTransactionType("buy");
-    setIsModalOpen(true);
-  };
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -234,7 +212,8 @@ export default function Positions() {
   const handleAddTransaction = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const symbolUpper = formSymbol.toUpperCase().trim();
+    let symbolUpper = formSymbol.toUpperCase().trim();
+
     const qtyNum = parseFloat(formQty);
     const priceNum = parseFloat(formPrice);
     const totalAmt = qtyNum * priceNum;
@@ -253,6 +232,9 @@ export default function Positions() {
       }
     }
 
+    const hasCustomFx = !isKlse(symbolUpper) && formCurrency === "MYR" && formUseCustomFx && formCustomFxRate;
+    const customFxVal = hasCustomFx ? parseFloat(formCustomFxRate) : undefined;
+
     // Create Transaction
     const newTx: GuestTransaction = {
       id: Date.now().toString(),
@@ -261,8 +243,30 @@ export default function Positions() {
       symbol: symbolUpper,
       quantity: qtyNum,
       price: priceNum,
-      totalAmount: totalAmt
+      totalAmount: totalAmt,
+      currency: formCurrency,
+      category: formCategory,
+      isCustom: formIsCustom,
+      currentPrice: formIsCustom ? parseFloat(formCurrentPrice) : priceNum,
+      customExchangeRate: customFxVal
     };
+
+    // Determine asset native currency
+    const assetNativeCurrency = formIsCustom ? formCurrency : (isKlse(symbolUpper) ? "MYR" : "USD");
+
+    // Convert transaction price/amount to asset native currency for Guest mode calculations
+    let nativePrice = priceNum;
+    let nativeAmount = totalAmt;
+
+    if (formCurrency === "MYR" && assetNativeCurrency === "USD") {
+      const rate = customFxVal || usdToMyrRate;
+      nativePrice = priceNum / rate;
+      nativeAmount = totalAmt / rate;
+    } else if (formCurrency === "USD" && assetNativeCurrency === "MYR") {
+      const rate = customFxVal || usdToMyrRate;
+      nativePrice = priceNum * rate;
+      nativeAmount = totalAmt * rate;
+    }
 
     // Compute updated positions
     const updatedPositions = (() => {
@@ -276,34 +280,40 @@ export default function Positions() {
 
         if (transactionType === "buy") {
           newQty = p.quantity + qtyNum;
-          newAvg = ((p.quantity * p.avgPrice) + totalAmt) / newQty;
+          newAvg = ((p.quantity * p.avgPrice) + nativeAmount) / newQty;
         } else {
           newQty = Math.max(0, p.quantity - qtyNum);
         }
 
-        const newTotalVal = newQty * priceNum;
+        const newCurrentPrice = formIsCustom ? parseFloat(formCurrentPrice) : p.currentPrice;
+        const newTotalVal = newQty * newCurrentPrice;
         const newPl = newTotalVal - (newQty * newAvg);
 
         updated[existingIdx] = {
           ...p,
           quantity: newQty,
-          avgPrice: parseFloat(newAvg.toFixed(2)),
-          currentPrice: priceNum,
+          avgPrice: parseFloat(newAvg.toFixed(4)),
+          currentPrice: newCurrentPrice,
           totalValue: parseFloat(newTotalVal.toFixed(2)),
-          pl: parseFloat(newPl.toFixed(2))
+          pl: parseFloat(newPl.toFixed(2)),
+          isCustom: formIsCustom || p.isCustom
         };
       } else {
         // Create new position
         if (transactionType === "buy") {
+          const newCurrentPrice = formIsCustom ? parseFloat(formCurrentPrice) : nativePrice;
           updated.push({
             id: Date.now().toString(),
             name: symbolUpper,
             symbol: symbolUpper,
             quantity: qtyNum,
-            avgPrice: priceNum,
-            currentPrice: priceNum,
-            totalValue: totalAmt,
-            pl: 0
+            avgPrice: parseFloat(nativePrice.toFixed(4)),
+            currentPrice: newCurrentPrice,
+            totalValue: parseFloat((qtyNum * newCurrentPrice).toFixed(2)),
+            pl: parseFloat(((newCurrentPrice - nativePrice) * qtyNum).toFixed(2)),
+            isCustom: formIsCustom,
+            category: formCategory,
+            currency: assetNativeCurrency
           });
         }
       }
@@ -318,6 +328,11 @@ export default function Positions() {
     setFormQty("");
     setFormPrice("");
     setFormDate(new Date().toISOString().split('T')[0]);
+    setFormCategory("STOCK");
+    setFormIsCustom(false);
+    setFormCurrentPrice("");
+    setFormUseCustomFx(false);
+    setFormCustomFxRate("");
   };
 
   return (
@@ -360,119 +375,26 @@ export default function Positions() {
         <div className={`bg-white dark:bg-gray-900/[0.8] rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 shadow-sm min-h-[500px] transition-all duration-1000 delay-300 ease-out ${isVisible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-30 blur-xs'}`}>
           {activeTab === "positions" && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {/* Ticker Search Widget */}
-              <div className="bg-slate-50 dark:bg-slate-800/10 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 mb-6 shadow-sm">
-                <h3 className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  Live Ticker Lookup
-                </h3>
-                <form onSubmit={handleSearchTicker} className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="text"
-                    placeholder="Enter symbol (e.g. AAPL, 1055.KL)"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-shadow font-medium uppercase"
-                  />
-                  <button
-                    type="submit"
-                    disabled={searchLoading}
-                    className="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 disabled:bg-brand-700/50 text-white font-semibold rounded-lg transition-colors shadow-md shadow-brand-500/10 active:scale-[0.98] flex items-center justify-center gap-2"
-                  >
-                    {searchLoading ? (
-                      <>
-                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Searching...
-                      </>
-                    ) : (
-                      "Lookup"
-                    )}
-                  </button>
-                </form>
+              <AutocompleteSearch
+                positions={positions}
+                onAddPosition={(symbol, price) => {
+                  setFormSymbol(symbol);
+                  setFormPrice(price.toFixed(2));
+                  setTransactionType("buy");
+                  setFormCurrency(isKlse(symbol) ? "MYR" : "USD");
+                  setIsManualCurrency(false);
 
-                {/* Search Result Card */}
-                {searchResult && (
-                  <div className="mt-4 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl p-4 animate-in fade-in duration-300">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">{searchResult.symbol}</span>
-                          {searchResult.hasPosition ? (
-                            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-500 ring-1 ring-inset ring-emerald-500/20">
-                              In Portfolio
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center rounded-full bg-red-500/10 px-2.5 py-0.5 text-xs font-semibold text-red-500 ring-1 ring-inset ring-red-500/20">
-                              Not in Portfolio
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-2xl font-extrabold text-gray-900 dark:text-white">
-                          {isKlse(searchResult.symbol) ? "RM " : "$"}{searchResult.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-                      </div>
+                  const s = symbol.toUpperCase();
+                  if (s.includes("/") || s.endsWith("USD") || ["BTC", "ETH", "SOL", "DOGE"].includes(s)) {
+                    setFormCategory("CRYPTO");
+                  } else {
+                    setFormCategory("STOCK");
+                  }
 
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={handleAddFromSearch}
-                          className="px-4 py-2 bg-brand-500/10 hover:bg-brand-500/20 text-brand-500 dark:text-brand-400 text-sm font-semibold rounded-lg transition-colors flex items-center gap-1.5"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                          </svg>
-                          Add Position
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Matched Position Details */}
-                    {searchResult.hasPosition && searchResult.positionDetails && (
-                      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800/80 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        <div>
-                          <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider block font-semibold">Your Holding</span>
-                          <span className="text-sm font-bold text-gray-900 dark:text-white">
-                            {searchResult.positionDetails.quantity.toFixed(4).replace(/\.?0+$/, "")} shares
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider block font-semibold">Avg Cost</span>
-                          <span className="text-sm font-bold text-gray-900 dark:text-white">
-                            {isKlse(searchResult.symbol) ? "RM " : "$"}{searchResult.positionDetails.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider block font-semibold">Market Value</span>
-                          <span className="text-sm font-bold text-gray-900 dark:text-white">
-                            {isKlse(searchResult.symbol) ? "RM " : "$"}{searchResult.positionDetails.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider block font-semibold">Total P/L</span>
-                          <span className={`text-sm font-bold ${searchResult.positionDetails.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
-                            {searchResult.positionDetails.pl >= 0 ? "+" : ""}{isKlse(searchResult.symbol) ? "RM " : "$"}{searchResult.positionDetails.pl.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Error Message */}
-                {searchError && (
-                  <div className="mt-3 bg-red-500/10 border border-red-500/20 text-red-500 dark:text-red-400 rounded-lg p-3 text-sm font-medium flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    {searchError}
-                  </div>
-                )}
-              </div>
+                  setIsModalOpen(true);
+                }}
+                usdToMyrRate={usdToMyrRate}
+              />
 
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>
@@ -554,6 +476,11 @@ export default function Positions() {
                     <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
                       1 USD = RM {usdToMyrRate.toFixed(2)}
                     </span>
+                    {usdToMyrFetchedAt && (
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 font-normal">
+                        As of {new Date(usdToMyrFetchedAt).toLocaleString()}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -588,7 +515,8 @@ export default function Positions() {
                               <th className="px-4 py-3 font-semibold">Asset</th>
                               <th className="px-4 py-3 font-semibold text-right">Quantity</th>
                               <th className="px-4 py-3 font-semibold text-right">Avg Price</th>
-                              <th className="px-4 py-3 font-semibold text-right">Current Price</th>
+                              <th className="px-4 py-3 font-semibold text-right">Current Price Per Share</th>
+                              <th className="px-4 py-3 font-semibold text-right">Total Cost</th>
                               <th className="px-4 py-3 font-semibold text-right">Total Value</th>
                               <th className="px-4 py-3 font-semibold text-right">P/L</th>
                             </tr>
@@ -603,11 +531,19 @@ export default function Positions() {
                                 }`}
                               >
                                 <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">
-                                  {pos.name} ({pos.symbol})
+                                  <div className="flex flex-col">
+                                    <span>{pos.name}</span>
+                                    {pos.category && (
+                                      <span className="text-[10px] text-gray-400 font-normal uppercase tracking-wider mt-0.5">
+                                        {pos.category.replace("_", " ")}
+                                      </span>
+                                    )}
+                                  </div>
                                 </td>
                                 <td className="px-4 py-4 text-right">{pos.quantity.toFixed(2)}</td>
                                 <td className="px-4 py-4 text-right">${pos.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                 <td className="px-4 py-4 text-right">${pos.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                <td className="px-4 py-4 text-right">${(pos.quantity * pos.avgPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                 <td className="px-4 py-4 text-right font-medium text-gray-900 dark:text-white">
                                   ${pos.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </td>
@@ -646,7 +582,8 @@ export default function Positions() {
                               <th className="px-4 py-3 font-semibold">Asset</th>
                               <th className="px-4 py-3 font-semibold text-right">Quantity</th>
                               <th className="px-4 py-3 font-semibold text-right">Avg Price</th>
-                              <th className="px-4 py-3 font-semibold text-right">Current Price</th>
+                              <th className="px-4 py-3 font-semibold text-right">Current Price Per Share</th>
+                              <th className="px-4 py-3 font-semibold text-right">Total Cost</th>
                               <th className="px-4 py-3 font-semibold text-right">Total Value</th>
                               <th className="px-4 py-3 font-semibold text-right">P/L</th>
                             </tr>
@@ -661,11 +598,19 @@ export default function Positions() {
                                 }`}
                               >
                                 <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">
-                                  {pos.name} ({pos.symbol})
+                                  <div className="flex flex-col">
+                                    <span>{pos.name}</span>
+                                    {pos.category && (
+                                      <span className="text-[10px] text-gray-400 font-normal uppercase tracking-wider mt-0.5">
+                                        {pos.category.replace("_", " ")}
+                                      </span>
+                                    )}
+                                  </div>
                                 </td>
                                 <td className="px-4 py-4 text-right">{pos.quantity.toFixed(2)}</td>
-                                <td className="px-4 py-4 text-right">RM {pos.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                <td className="px-4 py-4 text-right">RM {pos.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>        
                                 <td className="px-4 py-4 text-right">RM {pos.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                <td className="px-4 py-4 text-right">RM {(pos.quantity * pos.avgPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                 <td className="px-4 py-4 text-right font-medium text-gray-900 dark:text-white">
                                   RM {pos.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </td>
@@ -729,9 +674,17 @@ export default function Positions() {
                           </td>
                           <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">{tx.symbol}</td>
                           <td className="px-4 py-4 text-right">{tx.quantity.toFixed(4).replace(/\.?0+$/, "")}</td>
-                          <td className="px-4 py-4 text-right">{isKlse(tx.symbol) ? "RM " : "$"}{tx.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                          <td className="px-4 py-4 text-right">
+                            {tx.currency === "MYR" ? "RM " : "$"}
+                            {tx.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            {tx.customExchangeRate && (
+                              <span className="text-[10px] text-gray-400 block font-normal mt-0.5" title="Custom Exchange Rate">
+                                (FX: {tx.customExchangeRate.toFixed(2)})
+                              </span>
+                            )}
+                          </td>
                           <td className="px-4 py-4 text-right font-medium text-gray-900 dark:text-white">
-                            {isKlse(tx.symbol) ? "RM " : "$"}{tx.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            {tx.currency === "MYR" ? "RM " : "$"}{tx.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                           </td>
                         </tr>
                       ))}
@@ -746,7 +699,20 @@ export default function Positions() {
         {/* Floating Action Button (FAB) for Add Position/Transaction */}
         <div className={`fixed bottom-10 right-10 z-50 transition-all duration-1000 delay-500 ease-out ${isVisible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-30 blur-xs'}`}>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setFormSymbol("");
+              setFormQty("");
+              setFormPrice("");
+              setFormDate(new Date().toISOString().split('T')[0]);
+              setFormCurrency(selectedCurrency);
+              setIsManualCurrency(false);
+              setFormCategory("STOCK");
+              setFormIsCustom(false);
+              setFormCurrentPrice("");
+              setFormUseCustomFx(false);
+              setFormCustomFxRate("");
+              setIsModalOpen(true);
+            }}
             className="group flex h-14 items-center rounded-full bg-brand-500 p-4 text-white shadow-lg shadow-brand-500/30 transition-all duration-300 hover:pr-6 active:scale-95 focus:outline-none focus:ring-4 focus:ring-brand-500/30"
             title="Add Transaction"
           >
@@ -775,9 +741,16 @@ export default function Positions() {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Asset Details: {selectedPosition.name}
                 </h3>
-                <span className="inline-block bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-semibold px-2 py-0.5 rounded mt-1">
-                  {selectedPosition.symbol}
-                </span>
+                <div className="flex gap-2 items-center mt-1">
+                  <span className="inline-block bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-semibold px-2 py-0.5 rounded">
+                    {selectedPosition.symbol}
+                  </span>
+                  {selectedPosition.category && (
+                    <span className="inline-block bg-brand-500/10 text-brand-500 text-xs font-semibold px-2 py-0.5 rounded uppercase">
+                      {selectedPosition.category.replace("_", " ")}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 
@@ -801,20 +774,86 @@ export default function Positions() {
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-3 border border-gray-100 dark:border-gray-800/60">
                   <span className="text-xs text-gray-500 dark:text-gray-400 block mb-0.5">Avg Buy Price</span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">{isKlse(selectedPosition.symbol) ? "RM " : "$"}{selectedPosition.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">{selectedPosition.currency === "MYR" ? "RM " : "$"}{selectedPosition.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-3 border border-gray-100 dark:border-gray-800/60">
-                  <span className="text-xs text-gray-500 dark:text-gray-400 block mb-0.5">Current Price</span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">{isKlse(selectedPosition.symbol) ? "RM " : "$"}{selectedPosition.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 block mb-0.5">Current Price Per Share</span>
+                  {isEditingPrice ? (
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <div className="relative flex-1 min-w-[90px]">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-xs font-medium pointer-events-none">
+                          {selectedPosition.currency === "MYR" ? "RM" : "$"}
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          disabled={isPriceSubmitting}
+                          value={tempPrice}
+                          onChange={(e) => setTempPrice(e.target.value)}
+                          className="w-full pl-8 pr-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-xs focus:ring-1 focus:ring-brand-500 focus:border-brand-500 outline-none transition-shadow"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSavePrice();
+                            if (e.key === "Escape") setIsEditingPrice(false);
+                          }}
+                          autoFocus
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSavePrice}
+                        disabled={isPriceSubmitting}
+                        className="p-1 bg-brand-500 hover:bg-brand-600 text-white rounded transition-colors disabled:opacity-50"
+                        title="Save Price"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingPrice(false)}
+                        disabled={isPriceSubmitting}
+                        className="p-1 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rounded transition-colors disabled:opacity-50"
+                        title="Cancel"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-lg font-bold text-gray-900 dark:text-white">
+                        {selectedPosition.currency === "MYR" ? "RM " : "$"}
+                        {selectedPosition.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      {selectedPosition.isCustom && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTempPrice(selectedPosition.currentPrice.toString());
+                            setIsEditingPrice(true);
+                          }}
+                          className="text-gray-400 hover:text-brand-500 transition-colors p-1"
+                          title="Edit Current Price"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-3 border border-gray-100 dark:border-gray-800/60">
                   <span className="text-xs text-gray-500 dark:text-gray-400 block mb-0.5">Total Value</span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">{isKlse(selectedPosition.symbol) ? "RM " : "$"}{selectedPosition.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">{selectedPosition.currency === "MYR" ? "RM " : "$"}{selectedPosition.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-3 border border-gray-100 dark:border-gray-800/60 col-span-2 sm:col-span-1">
                   <span className="text-xs text-gray-500 dark:text-gray-400 block mb-0.5">Profit / Loss</span>
                   <span className={`text-lg font-bold ${selectedPosition.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
-                    {selectedPosition.pl >= 0 ? "+" : ""}{isKlse(selectedPosition.symbol) ? "RM " : "$"}{selectedPosition.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {selectedPosition.pl >= 0 ? "+" : ""}{selectedPosition.currency === "MYR" ? "RM " : "$"}{selectedPosition.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -868,9 +907,17 @@ export default function Positions() {
                             <td className="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
                               {tx.quantity.toFixed(4).replace(/\.?0+$/, "")}
                             </td>
-                            <td className="px-4 py-3 text-right">{isKlse(selectedPosition.symbol) ? "RM " : "$"}{tx.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            <td className="px-4 py-3 text-right">
+                              {tx.currency === "MYR" ? "RM " : "$"}
+                              {tx.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                              {tx.customExchangeRate && (
+                                <span className="text-[10px] text-gray-400 block font-normal mt-0.5" title="Custom Exchange Rate">
+                                  (FX: {tx.customExchangeRate.toFixed(2)})
+                                </span>
+                              )}
+                            </td>
                             <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">
-                              {isKlse(selectedPosition.symbol) ? "RM " : "$"}{tx.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                              {tx.currency === "MYR" ? "RM " : "$"}{tx.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </td>
                           </tr>
                         ))}
@@ -945,17 +992,89 @@ export default function Positions() {
                 </div>
               </div>
 
-              {/* Asset Name */}
+              {/* Asset Name & Currency */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Asset Symbol / Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. AAPL"
+                    required
+                    value={formSymbol}
+                    onChange={(e) => setFormSymbol(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-shadow uppercase"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Currency</label>
+                  <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 p-1 bg-gray-50 dark:bg-gray-900 items-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormCurrency("USD");
+                        setIsManualCurrency(true);
+                      }}
+                      className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all duration-300 ${
+                        formCurrency === "USD"
+                          ? "bg-brand-500 text-white shadow-sm"
+                          : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      }`}
+                    >
+                      USD
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormCurrency("MYR");
+                        setIsManualCurrency(true);
+                      }}
+                      className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all duration-300 ${
+                        formCurrency === "MYR"
+                          ? "bg-brand-500 text-white shadow-sm"
+                          : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      }`}
+                    >
+                      MYR
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Asset Category */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Asset Symbol / Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Asset Category</label>
+                <select
+                  value={formCategory}
+                  onChange={(e) => setFormCategory(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-shadow font-medium"
+                >
+                  <option value="STOCK">Stock</option>
+                  <option value="CRYPTO">Crypto</option>
+                  <option value="REAL_ESTATE">Real Estate</option>
+                  <option value="BOND">Bond</option>
+                  <option value="MUTUAL_FUND">Mutual Fund</option>
+                  <option value="CASH">Cash</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+
+              {/* Custom Asset Toggle */}
+              <div className="flex items-center gap-2 py-1">
                 <input
-                  type="text"
-                  placeholder="e.g. AAPL"
-                  required
-                  value={formSymbol}
-                  onChange={(e) => setFormSymbol(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-shadow"
+                  type="checkbox"
+                  id="formIsCustom"
+                  checked={formIsCustom}
+                  onChange={(e) => {
+                    setFormIsCustom(e.target.checked);
+                    if (e.target.checked) {
+                      setFormCategory("OTHER");
+                    }
+                  }}
+                  className="h-4 w-4 rounded border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-brand-500 focus:ring-brand-500"
                 />
+                <label htmlFor="formIsCustom" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                  Custom Asset (Not listed on exchanges)
+                </label>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -976,11 +1095,11 @@ export default function Positions() {
                 {/* Price */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Price per share ({isKlse(formSymbol) ? "RM" : "USD"})
+                    {formIsCustom ? `Buy Price per unit (${formCurrency === "MYR" ? "RM" : "USD"})` : `Price per share (${formCurrency === "MYR" ? "RM" : "USD"})`}
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 font-medium pointer-events-none text-sm">
-                      {isKlse(formSymbol) ? "RM" : "$"}
+                      {formCurrency === "MYR" ? "RM" : "$"}
                     </span>
                     <input
                       type="number"
@@ -995,6 +1114,70 @@ export default function Positions() {
                   </div>
                 </div>
               </div>
+
+              {/* Current Price (Only for Custom Assets) */}
+              {formIsCustom && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Current Price per unit ({formCurrency === "MYR" ? "RM" : "USD"})
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 font-medium pointer-events-none text-sm">
+                      {formCurrency === "MYR" ? "RM" : "$"}
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      required
+                      placeholder="0.00"
+                      value={formCurrentPrice}
+                      onChange={(e) => setFormCurrentPrice(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-shadow"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Custom Exchange Rate (Only for US assets purchased using MYR) */}
+              {!isKlse(formSymbol) && formCurrency === "MYR" && (
+                <div className="space-y-2.5 bg-gray-50 dark:bg-gray-800/20 p-3 rounded-lg border border-gray-150 dark:border-gray-850">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="formUseCustomFx"
+                      checked={formUseCustomFx}
+                      onChange={(e) => {
+                        setFormUseCustomFx(e.target.checked);
+                        if (!e.target.checked) {
+                          setFormCustomFxRate("");
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-brand-500 focus:ring-brand-500"
+                    />
+                    <label htmlFor="formUseCustomFx" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                      Use Custom Exchange Rate
+                    </label>
+                  </div>
+                  {formUseCustomFx && (
+                    <div className="animate-in fade-in duration-200">
+                      <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                        Custom FX Rate (1 USD = ? MYR)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        required
+                        placeholder="e.g. 4.72"
+                        value={formCustomFxRate}
+                        onChange={(e) => setFormCustomFxRate(e.target.value)}
+                        className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-shadow text-sm"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Date */}
               <div>

@@ -17,12 +17,16 @@ export interface GuestPosition {
   currentPrice: number;
   totalValue: number;
   pl: number;
+  isCustom: boolean;
+  category?: string;
+  currency: "USD" | "MYR";
 }
 
 export const GUEST_POSITIONS: GuestPosition[] = [
-  { id: "1", name: "Apple Inc.", symbol: "AAPL", quantity: 50.0, avgPrice: 150.0, currentPrice: 175.5, totalValue: 8775.0, pl: 1275.0 },
-  { id: "2", name: "Tesla", symbol: "TSLA", quantity: 20.0, avgPrice: 200.0, currentPrice: 180.2, totalValue: 3604.0, pl: -396.0 },
-  { id: "3", name: "Bitcoin", symbol: "BTC", quantity: 0.5, avgPrice: 60000.0, currentPrice: 65200.0, totalValue: 32600.0, pl: 2600.0 },
+  { id: "1", name: "Apple Inc.", symbol: "AAPL", quantity: 50.0, avgPrice: 150.0, currentPrice: 175.5, totalValue: 8775.0, pl: 1275.0, isCustom: false, category: "STOCK", currency: "USD" },
+  { id: "2", name: "Tesla", symbol: "TSLA", quantity: 20.0, avgPrice: 200.0, currentPrice: 180.2, totalValue: 3604.0, pl: -396.0, isCustom: false, category: "STOCK", currency: "USD" },
+  { id: "3", name: "Bitcoin", symbol: "BTC", quantity: 0.5, avgPrice: 60000.0, currentPrice: 65200.0, totalValue: 32600.0, pl: 2600.0, isCustom: false, category: "CRYPTO", currency: "USD" },
+  { id: "4", name: "My Luxury Watch", symbol: "WATCH", quantity: 1.0, avgPrice: 5000.0, currentPrice: 5000.0, totalValue: 5000.0, pl: 0.0, isCustom: true, category: "OTHER", currency: "MYR" },
 ];
 
 // =========================================================================
@@ -37,12 +41,17 @@ export interface GuestTransaction {
   quantity: number;
   price: number;
   totalAmount: number;
+  currency: "USD" | "MYR";
+  category?: string;
+  isCustom?: boolean;
+  currentPrice?: number;
+  customExchangeRate?: number;
 }
 
 export const GUEST_TRANSACTIONS: GuestTransaction[] = [
-  { id: "1", date: "2026-05-15", type: "buy", symbol: "BTC", quantity: 0.1, price: 64000.0, totalAmount: 6400.0 },
-  { id: "2", date: "2026-05-12", type: "sell", symbol: "TSLA", quantity: 5.0, price: 180.2, totalAmount: 901.0 },
-  { id: "3", date: "2026-05-10", type: "buy", symbol: "AAPL", quantity: 10.0, price: 175.5, totalAmount: 1755.0 },
+  { id: "1", date: "2026-05-15", type: "buy", symbol: "BTC", quantity: 0.1, price: 64000.0, totalAmount: 6400.0, currency: "USD", category: "CRYPTO" },
+  { id: "2", date: "2026-05-12", type: "sell", symbol: "TSLA", quantity: 5.0, price: 180.2, totalAmount: 901.0, currency: "USD", category: "STOCK" },
+  { id: "3", date: "2026-05-10", type: "buy", symbol: "AAPL", quantity: 10.0, price: 175.5, totalAmount: 1755.0, currency: "USD", category: "STOCK" },
 ];
 
 // =========================================================================

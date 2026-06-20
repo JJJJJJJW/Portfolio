@@ -28,10 +28,7 @@ export default function FinanceMetrics({ metrics }: FinanceMetricsProps) {
               {metrics.portfolioValue}
             </h4>
           </div>
-          <Badge color="success">
-            <ArrowUpIcon />
-            {metrics.portfolioChange}
-          </Badge>
+          
         </div>
       </div>
       {/* <!-- Metric Item End --> */}

@@ -5,10 +5,14 @@ import type { GuestChartData } from "../../data/guestData";
 
 interface PortfolioChartProps {
   chartData: GuestChartData;
+  currency?: string;
 }
 
-export default function PortfolioChart({ chartData }: PortfolioChartProps) {
+export default function PortfolioChart({ chartData, currency }: PortfolioChartProps) {
   const [timeframe, setTimeframe] = useState<"daily" | "monthly">("monthly");
+
+  const prefix = currency === "MYR" ? "RM " : "$";
+
   const options: ApexOptions = {
     colors: ["#10b981"], // Emerald-500
     chart: {
@@ -49,7 +53,12 @@ export default function PortfolioChart({ chartData }: PortfolioChartProps) {
         text: undefined,
       },
       labels: {
-        formatter: (value) => `$${value}k`,
+        formatter: (value) => {
+          if (Math.abs(value) >= 1000) {
+            return `${prefix}${(value / 1000).toFixed(0)}k`;
+          }
+          return `${prefix}${value.toFixed(0)}`;
+        },
       },
     },
     grid: {
@@ -70,7 +79,7 @@ export default function PortfolioChart({ chartData }: PortfolioChartProps) {
     },
     tooltip: {
       y: {
-        formatter: (val: number) => `$${val}k`,
+        formatter: (val: number) => `${prefix}${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       },
     },
   };
@@ -78,7 +87,7 @@ export default function PortfolioChart({ chartData }: PortfolioChartProps) {
   const series = [
     {
       name: "Portfolio Value",
-      data: timeframe === "monthly" 
+      data: timeframe === "monthly"
         ? chartData.monthlySeries
         : chartData.dailySeries,
     },
@@ -88,22 +97,20 @@ export default function PortfolioChart({ chartData }: PortfolioChartProps) {
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-5 pt-5 dark:border-gray-800 dark:bg-gray-900/[0.9] sm:px-6 sm:pt-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-          Portfolio Value Over Time 
+          Portfolio Value Over Time
         </h3>
         <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
           <button
             onClick={() => setTimeframe("daily")}
-            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-              timeframe === "daily" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            }`}
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${timeframe === "daily" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              }`}
           >
             Daily
           </button>
           <button
             onClick={() => setTimeframe("monthly")}
-            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-              timeframe === "monthly" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            }`}
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${timeframe === "monthly" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              }`}
           >
             Monthly
           </button>

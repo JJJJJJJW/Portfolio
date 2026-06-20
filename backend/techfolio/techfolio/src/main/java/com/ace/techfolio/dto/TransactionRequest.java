@@ -27,5 +27,15 @@ public record TransactionRequest(
         BigDecimal price,
 
         @NotBlank(message = "Date is required")
-        String date
+        String date,
+
+        String currency,
+
+        String category,
+
+        Boolean isCustom,
+
+        BigDecimal currentPrice,
+
+        BigDecimal customExchangeRate
 ) {}

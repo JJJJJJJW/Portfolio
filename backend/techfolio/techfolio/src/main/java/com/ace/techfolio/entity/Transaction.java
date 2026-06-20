@@ -74,6 +74,16 @@ public class Transaction {
     @Column(name = "quantity", precision = 19, scale = 8)
     private BigDecimal quantity;
 
+    @Size(max = 3)
+    @Column(name = "currency", length = 3)
+    private String currency;
+
+    @Column(name = "is_custom", nullable = false)
+    private boolean isCustom = false;
+
+    @Column(name = "custom_exchange_rate", precision = 19, scale = 6)
+    private BigDecimal customExchangeRate;
+
     @NotNull(message = "Transaction date is required")
     @Column(name = "transaction_date", nullable = false)
     private LocalDate transactionDate;
@@ -175,6 +185,22 @@ public class Transaction {
         this.quantity = quantity;
     }
 
+    public String getCurrency() {
+        return currency != null ? currency : "USD";
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
+
+    public boolean isCustom() {
+        return isCustom;
+    }
+
+    public void setCustom(boolean custom) {
+        this.isCustom = custom;
+    }
+
     public LocalDate getTransactionDate() {
         return transactionDate;
     }
@@ -189,5 +215,13 @@ public class Transaction {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public BigDecimal getCustomExchangeRate() {
+        return customExchangeRate;
+    }
+
+    public void setCustomExchangeRate(BigDecimal customExchangeRate) {
+        this.customExchangeRate = customExchangeRate;
     }
 }

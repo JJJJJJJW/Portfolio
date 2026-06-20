@@ -1,6 +1,8 @@
 package com.ace.techfolio.controller;
 
-import com.ace.techfolio.dto.MarketSearchResult;
+import com.ace.techfolio.dto.ExchangeRateResponse;
+import com.ace.techfolio.entity.AssetMaster;
+import com.ace.techfolio.repository.AssetMasterRepository;
 import com.ace.techfolio.service.MarketDataService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,26 +26,42 @@ import java.util.Map;
 public class MarketDataController {
 
     private final MarketDataService marketDataService;
+    private final AssetMasterRepository assetMasterRepository;
 
-    public MarketDataController(MarketDataService marketDataService) {
+    public MarketDataController(MarketDataService marketDataService, AssetMasterRepository assetMasterRepository) {
         this.marketDataService = marketDataService;
+        this.assetMasterRepository = assetMasterRepository;
     }
 
     /**
-     * Autocomplete search for tickers across Bursa Malaysia and global markets.
-     *
-     * <p>Routing logic:</p>
-     * <ul>
-     *   <li>Purely numeric query or ".KL" suffix → Bursa Malaysia local lookup</li>
-     *   <li>Otherwise → Twelve Data /symbol_search</li>
-     * </ul>
+     * Autocomplete search for tickers using local PostgreSQL asset_master table lookup.
+     * Capped at 10 results to maintain low memory profile.
      *
      * @param query the search term (e.g., "AAPL", "1155", "Maybank")
-     * @return list of matching symbols with name, type, and exchange
+     * @return list of matching symbols with name, type, and exchange from database
      */
     @GetMapping("/search")
-    public ResponseEntity<List<MarketSearchResult>> search(@RequestParam String query) {
-        return ResponseEntity.ok(marketDataService.search(query));
+    public ResponseEntity<List<AssetMaster>> search(@RequestParam String query) {
+        if (query == null || query.isBlank()) {
+            return ResponseEntity.ok(List.of());
+        }
+        return ResponseEntity.ok(assetMasterRepository.searchAssets(query.trim()));
+    }
+
+    /**
+     * Fetch live price of a specific selected ticker from external APIs.
+     *
+     * @param ticker ticker symbol (e.g., "AAPL", "1155.KL", "BTC/USD")
+     * @return live price value
+     */
+    @GetMapping("/price")
+    public ResponseEntity<Double> getPrice(@RequestParam String ticker) {
+        if (ticker == null || ticker.isBlank()) {
+            return ResponseEntity.ok(0.0);
+        }
+        Double price = marketDataService.getBatchPrices(List.of(ticker))
+                .getOrDefault(ticker.trim().toUpperCase(), 0.0);
+        return ResponseEntity.ok(price);
     }
 
     /**
@@ -62,5 +80,16 @@ public class MarketDataController {
                 .filter(s -> !s.isBlank())
                 .toList();
         return ResponseEntity.ok(marketDataService.getBatchPrices(tickerList));
+    }
+
+    /**
+     * Get the latest exchange rate with fetch timestamp.
+     *
+     * @param symbol currency pair (default "USD/MYR")
+     * @return latest exchange rate and timestamp
+     */
+    @GetMapping("/exchange-rate")
+    public ResponseEntity<ExchangeRateResponse> getLatestExchangeRate(@RequestParam(defaultValue = "USD/MYR") String symbol) {
+        return ResponseEntity.ok(marketDataService.getLatestExchangeRate(symbol));
     }
 }

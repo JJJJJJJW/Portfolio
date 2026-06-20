@@ -16,5 +16,7 @@ public record AssetResponse(
         BigDecimal avgPrice,
         BigDecimal currentPrice,
         BigDecimal totalValue,
-        BigDecimal pl
+        BigDecimal pl,
+        boolean isCustom,
+        String currency
 ) {}

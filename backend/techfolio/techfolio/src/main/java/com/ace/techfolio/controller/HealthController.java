@@ -43,4 +43,13 @@ public class HealthController {
 
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * Ultra-lightweight keep-alive ping — no DB, no auth, no allocations.
+     * Point cronjob.org here every 5–14 minutes to prevent Render from sleeping.
+     */
+    @GetMapping("/ping")
+    public ResponseEntity<String> ping() {
+        return ResponseEntity.ok("pong");
+    }
 }

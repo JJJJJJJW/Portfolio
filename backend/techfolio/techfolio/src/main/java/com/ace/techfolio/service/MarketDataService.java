@@ -1,6 +1,9 @@
 package com.ace.techfolio.service;
 
+import com.ace.techfolio.dto.ExchangeRateResponse;
 import com.ace.techfolio.dto.MarketSearchResult;
+import com.ace.techfolio.entity.ExchangeRate;
+import com.ace.techfolio.repository.ExchangeRateRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.json.JsonParser;
@@ -20,18 +23,26 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Unified Market Data Router.
  *
- * <p>Routes asset search and price requests to the correct upstream provider:</p>
+ * <p>
+ * Routes asset search and price requests to the correct upstream provider:
+ * </p>
  * <ul>
- *   <li><b>Bursa Malaysia (.KL)</b>: Yahoo Finance API via {@code com.yahoofinance-api}</li>
- *   <li><b>US Equities, Forex, Crypto</b>: Twelve Data REST API via {@link TwelveDataService}</li>
+ * <li><b>Bursa Malaysia (.KL)</b>: Yahoo Finance API via
+ * {@code com.yahoofinance-api}</li>
+ * <li><b>US Equities, Forex, Crypto</b>: Twelve Data REST API via
+ * {@link TwelveDataService}</li>
  * </ul>
  *
- * <p>All objects from external libraries (e.g., Yahoo's {@code Stock}) are used within
- * local method scope only, so the Serial GC can reclaim them immediately.</p>
+ * <p>
+ * All objects from external libraries (e.g., Yahoo's {@code Stock}) are used
+ * within
+ * local method scope only, so the Serial GC can reclaim them immediately.
+ * </p>
  */
 @Service
 public class MarketDataService {
@@ -42,7 +53,8 @@ public class MarketDataService {
         // Configure the Java-wide default User-Agent to mimic a browser.
         // This acts as a first line of defense for libraries like yahoofinance-api
         // that use standard URLConnections without setting a custom User-Agent.
-        System.setProperty("http.agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        System.setProperty("http.agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
     }
 
     private final TwelveDataService twelveDataService;
@@ -83,11 +95,16 @@ public class MarketDataService {
             Map.entry("7084", "QL Resources"),
             Map.entry("7113", "Top Glove"),
             Map.entry("0166", "MYEG Services"),
-            Map.entry("5099", "AirAsia (Capital A)")
-    );
+            Map.entry("5099", "AirAsia (Capital A)"));
 
-    public MarketDataService(TwelveDataService twelveDataService) {
+    private final ExchangeRateRepository exchangeRateRepository;
+    private volatile double usdToMyrRateCache = 4.70;
+    private volatile long usdToMyrRateCacheTime = 0L;
+    private static final long CACHE_DURATION_MS = 15 * 60 * 1000L; // 15 minutes cache lifetime
+
+    public MarketDataService(TwelveDataService twelveDataService, ExchangeRateRepository exchangeRateRepository) {
         this.twelveDataService = twelveDataService;
+        this.exchangeRateRepository = exchangeRateRepository;
     }
 
     // =========================================================================
@@ -97,8 +114,9 @@ public class MarketDataService {
     /**
      * Intelligent search router.
      * <ul>
-     *   <li>If the query is purely numeric or ends with ".KL" → Bursa Malaysia local lookup.</li>
-     *   <li>Otherwise → forward to Twelve Data /symbol_search.</li>
+     * <li>If the query is purely numeric or ends with ".KL" → Bursa Malaysia local
+     * lookup.</li>
+     * <li>Otherwise → forward to Twelve Data /symbol_search.</li>
      * </ul>
      */
     public List<MarketSearchResult> search(String query) {
@@ -107,9 +125,13 @@ public class MarketDataService {
         }
 
         String trimmed = query.trim();
+        String upperTrimmed = trimmed.toUpperCase();
 
-        // Route to Bursa if query is purely numeric or ends with .KL
-        if (trimmed.matches("^\\d+$") || trimmed.toUpperCase().endsWith(".KL")) {
+        // Route to Bursa if query is purely numeric or ends with .KL, .KLSE, or .XKLS
+        if (trimmed.matches("^\\d+$")
+                || upperTrimmed.endsWith(".KL")
+                || upperTrimmed.endsWith(".KLSE")
+                || upperTrimmed.endsWith(".XKLS")) {
             return searchBursa(trimmed);
         }
 
@@ -122,7 +144,10 @@ public class MarketDataService {
      */
     private List<MarketSearchResult> searchBursa(String query) {
         List<MarketSearchResult> results = new ArrayList<>();
-        String upperQuery = query.toUpperCase().replace(".KL", "");
+        String upperQuery = query.toUpperCase()
+                .replace(".KLSE", "")
+                .replace(".XKLS", "")
+                .replace(".KL", "");
 
         for (Map.Entry<String, String> entry : BURSA_TICKERS.entrySet()) {
             String code = entry.getKey();
@@ -133,8 +158,7 @@ public class MarketDataService {
                         code + ".KL",
                         name,
                         "Common Stock",
-                        "Bursa Malaysia (XKLS)"
-                ));
+                        "Bursa Malaysia (XKLS)"));
             }
         }
 
@@ -143,7 +167,8 @@ public class MarketDataService {
     }
 
     /**
-     * Forwards the search query to Twelve Data's /symbol_search and maps results to DTOs.
+     * Forwards the search query to Twelve Data's /symbol_search and maps results to
+     * DTOs.
      */
     private List<MarketSearchResult> searchTwelveData(String query) {
         List<Map<String, String>> rawResults = twelveDataService.searchSymbols(query);
@@ -154,8 +179,7 @@ public class MarketDataService {
                     raw.getOrDefault("symbol", ""),
                     raw.getOrDefault("name", ""),
                     raw.getOrDefault("type", ""),
-                    raw.getOrDefault("exchange", "")
-            ));
+                    raw.getOrDefault("exchange", "")));
         }
 
         log.info("Twelve Data search for '{}' returned {} results", query, results.size());
@@ -179,26 +203,54 @@ public class MarketDataService {
             return Map.of();
         }
 
-        // Partition tickers into Bursa (.KL) and Twelve Data (everything else)
-        List<String> bursaTickers = new ArrayList<>();
+        // Partition tickers into Bursa (.KL, .KLSE, .XKLS), USD/MYR, and Twelve Data
+        // (everything else)
         List<String> globalTickers = new ArrayList<>();
+        Map<String, List<String>> bursaNormalizedToOriginals = new HashMap<>();
+        boolean fetchExchangeRate = false;
 
         for (String ticker : tickers) {
-            if (ticker == null || ticker.isBlank()) continue;
-            String cleaned = ticker.trim().toUpperCase();
-            if (cleaned.endsWith(".KL")) {
-                bursaTickers.add(cleaned);
+            if (ticker == null || ticker.isBlank())
+                continue;
+            String original = ticker.trim().toUpperCase();
+            if (original.equals("USD/MYR")) {
+                fetchExchangeRate = true;
+            } else if (original.endsWith(".KL") || original.endsWith(".KLSE") || original.endsWith(".XKLS")) {
+                String normalized = original;
+                if (original.endsWith(".KLSE")) {
+                    normalized = original.substring(0, original.length() - 5) + ".KL";
+                } else if (original.endsWith(".XKLS")) {
+                    normalized = original.substring(0, original.length() - 5) + ".KL";
+                }
+                bursaNormalizedToOriginals.computeIfAbsent(normalized, k -> new ArrayList<>()).add(original);
             } else {
-                globalTickers.add(cleaned);
+                globalTickers.add(original);
             }
         }
 
         Map<String, Double> combined = new HashMap<>();
 
+        if (fetchExchangeRate) {
+            double rate = fetchUsdToMyrRateWithFallback();
+            combined.put("USD/MYR", rate);
+        }
+
         // Bulk call 1: Yahoo Finance for Bursa Malaysia
-        if (!bursaTickers.isEmpty()) {
-            Map<String, Double> bursaPrices = fetchBursaPrices(bursaTickers);
-            combined.putAll(bursaPrices);
+        if (!bursaNormalizedToOriginals.isEmpty()) {
+            List<String> normalizedBursaTickers = new ArrayList<>(bursaNormalizedToOriginals.keySet());
+            Map<String, Double> bursaPrices = fetchBursaPrices(normalizedBursaTickers);
+
+            // Map the fetched prices back to the original ticker symbols
+            for (Map.Entry<String, Double> entry : bursaPrices.entrySet()) {
+                String normalized = entry.getKey().toUpperCase();
+                Double price = entry.getValue();
+                List<String> originals = bursaNormalizedToOriginals.get(normalized);
+                if (originals != null) {
+                    for (String original : originals) {
+                        combined.put(original, price);
+                    }
+                }
+            }
         }
 
         // Bulk call 2: Twelve Data for global assets
@@ -212,44 +264,15 @@ public class MarketDataService {
 
     /**
      * Fetches prices for Bursa Malaysia stocks via Yahoo Finance batch API.
-     * Extracts primitive values immediately and lets Stock objects go out of scope for GC.
+     * Extracts primitive values immediately and lets Stock objects go out of scope
+     * for GC.
      *
      * @param symbols list of ".KL" suffixed tickers
      * @return map of symbol → price (fallback 0.0 for failures)
      */
     private Map<String, Double> fetchBursaPrices(List<String> symbols) {
-        Map<String, Double> result = new HashMap<>();
-
-        try {
-            String[] symbolArray = symbols.toArray(new String[0]);
-            log.info("Fetching Bursa prices via Yahoo Finance library for: {}", symbols);
-
-            // Yahoo Finance batch call — returns Map<String, Stock>
-            Map<String, Stock> stocks = YahooFinance.get(symbolArray);
-
-            for (Map.Entry<String, Stock> entry : stocks.entrySet()) {
-                String sym = entry.getKey().toUpperCase();
-                Stock stock = entry.getValue();
-
-                try {
-                    if (stock != null
-                            && stock.getQuote() != null
-                            && stock.getQuote().getPrice() != null) {
-                        BigDecimal price = stock.getQuote().getPrice();
-                        result.put(sym, price.doubleValue());
-                    } else {
-                        log.warn("Yahoo Finance library returned null/invalid quote for Bursa ticker: {}", sym);
-                        result.put(sym, 0.0);
-                    }
-                } catch (Exception e) {
-                    log.error("Error extracting Yahoo Finance library price for {}: {}", sym, e.getMessage());
-                    result.put(sym, 0.0);
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Yahoo Finance library batch call failed ({}). Attempting direct REST fallback...", e.getMessage());
-            result = fetchBursaPricesDirect(symbols);
-        }
+        log.info("Fetching Bursa prices directly from Yahoo Finance v8 chart API: {}", symbols);
+        Map<String, Double> result = fetchBursaPricesDirect(symbols);
 
         // Ensure all requested symbols have a value
         for (String sym : symbols) {
@@ -261,30 +284,36 @@ public class MarketDataService {
 
     /**
      * Fallback mechanism: queries Yahoo Finance v8 chart JSON endpoint directly.
-     * The v7 quote API requires crumb authentication, but v8 chart API is often open.
+     * The v7 quote API requires crumb authentication, but v8 chart API is often
+     * open.
      * Reuses standard RestTemplate and explicitly sends browser User-Agent headers.
      */
     @SuppressWarnings("unchecked")
     private Map<String, Double> fetchBursaPricesDirect(List<String> symbols) {
         Map<String, Double> prices = new HashMap<>();
-        if (symbols == null || symbols.isEmpty()) return prices;
+        if (symbols == null || symbols.isEmpty())
+            return prices;
 
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
-        headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        headers.set("User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
         HttpEntity<String> entity = new HttpEntity<>(headers);
-        org.springframework.boot.json.JsonParser parser = org.springframework.boot.json.JsonParserFactory.getJsonParser();
+        org.springframework.boot.json.JsonParser parser = org.springframework.boot.json.JsonParserFactory
+                .getJsonParser();
 
         for (String symbol : symbols) {
-            if (symbol == null || symbol.isBlank()) continue;
+            if (symbol == null || symbol.isBlank())
+                continue;
             String cleanSymbol = symbol.trim().toUpperCase();
-            
+
             try {
-                String url = UriComponentsBuilder.fromUriString("https://query1.finance.yahoo.com/v8/finance/chart/" + cleanSymbol)
+                String url = UriComponentsBuilder
+                        .fromUriString("https://query1.finance.yahoo.com/v8/finance/chart/" + cleanSymbol)
                         .build()
                         .toUriString();
 
-                log.info("Fetching Bursa price fallback directly from Yahoo v8 chart API: {}", url);
+                log.info("Fetching Bursa price directly from Yahoo v8 chart API: {}", url);
 
                 ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
                 String responseBody = response.getBody();
@@ -314,9 +343,105 @@ public class MarketDataService {
                     }
                 }
             } catch (Exception e) {
-                log.error("Direct Yahoo Finance v8 chart API fallback failed for symbol {}: {}", cleanSymbol, e.getMessage());
+                log.error("Direct Yahoo Finance v8 chart API failed for symbol {}: {}", cleanSymbol, e.getMessage());
             }
         }
         return prices;
+    }
+
+    /**
+     * Fetches the USD/MYR exchange rate using a multi-tier fallback mechanism.
+     * <ol>
+     * <li>Primary: Yahoo Finance Chart API using the symbol "MYR=X".</li>
+     * <li>Secondary: Twelve Data API ("USD/MYR").</li>
+     * <li>Fallback: In-memory cache (last successful rate or default 4.70).</li>
+     * </ol>
+     */
+    public double fetchUsdToMyrRateWithFallback() {
+        long now = System.currentTimeMillis();
+        if (now - usdToMyrRateCacheTime < CACHE_DURATION_MS && usdToMyrRateCache > 0.0) {
+            log.info("Returning cached USD/MYR exchange rate: {}", usdToMyrRateCache);
+            return usdToMyrRateCache;
+        }
+
+        // Tier 1: Yahoo Finance Chart API for MYR=X
+        try {
+            log.info("Exchange Rate Fallback Tier 1: Querying Yahoo Finance for 'MYR=X'");
+            Map<String, Double> yahooResult = fetchBursaPricesDirect(List.of("MYR=X"));
+            if (yahooResult != null && yahooResult.containsKey("MYR=X")) {
+                double rate = yahooResult.get("MYR=X");
+                if (rate > 0.0) {
+                    usdToMyrRateCache = rate;
+                    usdToMyrRateCacheTime = now;
+                    saveRateToDb("USD/MYR", rate);
+                    log.info("Successfully fetched USD/MYR rate from Yahoo Finance: {}", rate);
+                    return rate;
+                }
+            }
+            log.warn("Yahoo Finance query for 'MYR=X' returned invalid rate or was empty.");
+        } catch (Exception e) {
+            log.error("Yahoo Finance query for 'MYR=X' failed: {}", e.getMessage());
+        }
+
+        // Tier 2: Twelve Data API
+        try {
+            log.info("Exchange Rate Fallback Tier 2: Querying Twelve Data for 'USD/MYR'");
+            double rate = twelveDataService.getPrice("USD/MYR");
+            if (rate > 0.0) {
+                usdToMyrRateCache = rate;
+                usdToMyrRateCacheTime = now;
+                saveRateToDb("USD/MYR", rate);
+                log.info("Successfully fetched USD/MYR rate from Twelve Data: {}", rate);
+                return rate;
+            }
+            log.warn("Twelve Data query for 'USD/MYR' returned 0.0.");
+        } catch (Exception e) {
+            log.error("Twelve Data query for 'USD/MYR' failed: {}", e.getMessage());
+        }
+
+        // Tier 3: Fallback to last successful cached rate
+        log.warn("All exchange rate sources failed. Using cached rate: {}", usdToMyrRateCache);
+        return usdToMyrRateCache;
+    }
+
+    private void saveRateToDb(String symbol, double rate) {
+        try {
+            String cleanSymbol = symbol.trim().toUpperCase();
+            Optional<ExchangeRate> existing = exchangeRateRepository.findFirstBySymbolOrderByFetchedAtDesc(cleanSymbol);
+            ExchangeRate entity;
+            if (existing.isPresent()) {
+                entity = existing.get();
+                entity.setRate(BigDecimal.valueOf(rate));
+                entity.setFetchedAt(java.time.LocalDateTime.now());
+                log.info("Updating existing exchange rate for {} to {}", cleanSymbol, rate);
+            } else {
+                entity = new ExchangeRate(cleanSymbol, BigDecimal.valueOf(rate));
+                log.info("Creating new exchange rate entry for {} with rate {}", cleanSymbol, rate);
+            }
+            exchangeRateRepository.save(entity);
+        } catch (Exception e) {
+            log.error("Failed to save exchange rate to database: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Retrieves the latest exchange rate from the database.
+     * Uses fetchUsdToMyrRateWithFallback() first to ensure we check/refresh cache if needed.
+     */
+    public ExchangeRateResponse getLatestExchangeRate(String symbol) {
+        String cleanSymbol = symbol.trim().toUpperCase();
+        if ("USD/MYR".equals(cleanSymbol)) {
+            // Trigger cache check or live fetch
+            fetchUsdToMyrRateWithFallback();
+        }
+
+        Optional<ExchangeRate> latest = exchangeRateRepository.findFirstBySymbolOrderByFetchedAtDesc(cleanSymbol);
+        if (latest.isPresent()) {
+            ExchangeRate er = latest.get();
+            return new ExchangeRateResponse(er.getSymbol(), er.getRate(), er.getFetchedAt());
+        }
+
+        // Hard fallback if DB has absolutely no record
+        return new ExchangeRateResponse(cleanSymbol, BigDecimal.valueOf(4.70), java.time.LocalDateTime.now());
     }
 }

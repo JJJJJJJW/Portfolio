@@ -54,6 +54,10 @@ public class TwelveDataService {
         }
 
         String cleanSymbol = symbol.trim().toUpperCase();
+        if (isBursaSymbol(cleanSymbol)) {
+            log.info("Bursa symbol {} bypassed Twelve Data price lookup and returned 0.0", cleanSymbol);
+            return 0.0;
+        }
 
         if (apiKey == null || apiKey.isBlank()) {
             log.warn("Twelve Data API key is not configured, returning fallback price 0.0 for symbol: {}", cleanSymbol);
@@ -118,6 +122,7 @@ public class TwelveDataService {
                 .filter(s -> s != null && !s.isBlank())
                 .map(String::trim)
                 .map(String::toUpperCase)
+                .filter(s -> !isBursaSymbol(s))
                 .distinct()
                 .toList();
 
@@ -215,6 +220,12 @@ public class TwelveDataService {
             return results;
         }
 
+        String trimmed = query.trim().toUpperCase();
+        if (isBursaSymbol(trimmed)) {
+            log.info("Bursa search query '{}' bypassed Twelve Data search", trimmed);
+            return results;
+        }
+
         if (apiKey == null || apiKey.isBlank()) {
             log.warn("Twelve Data API key is not configured, returning empty search results");
             return results;
@@ -260,5 +271,13 @@ public class TwelveDataService {
         }
 
         return results;
+    }
+
+    private boolean isBursaSymbol(String symbol) {
+        if (symbol == null) {
+            return false;
+        }
+        String upper = symbol.trim().toUpperCase();
+        return upper.endsWith(".KL") || upper.endsWith(".KLSE") || upper.endsWith(".XKLS");
     }
 }

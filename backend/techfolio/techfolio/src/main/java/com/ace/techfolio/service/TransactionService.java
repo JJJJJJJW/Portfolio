@@ -12,11 +12,14 @@ import com.ace.techfolio.repository.TransactionRepository;
 import com.ace.techfolio.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -26,14 +29,18 @@ import java.util.UUID;
 @Service
 public class TransactionService {
 
+    private static final Logger log = LoggerFactory.getLogger(TransactionService.class);
+
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final AssetRepository assetRepository;
+    private final MarketDataService marketDataService;
 
-    public TransactionService(TransactionRepository transactionRepository, UserRepository userRepository, AssetRepository assetRepository) {
+    public TransactionService(TransactionRepository transactionRepository, UserRepository userRepository, AssetRepository assetRepository, MarketDataService marketDataService) {
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
         this.assetRepository = assetRepository;
+        this.marketDataService = marketDataService;
     }
 
     /**
@@ -63,10 +70,29 @@ public class TransactionService {
         tx.setAmount(request.quantity().multiply(request.price()).setScale(4, RoundingMode.HALF_UP));
         tx.setTransactionDate(LocalDate.parse(request.date()));
         tx.setDescription(request.type().toUpperCase() + " " + request.symbol().toUpperCase());
+        
+        tx.setCurrency(request.currency() != null && !request.currency().isBlank() ? request.currency().toUpperCase() : "USD");
+        tx.setCustom(Boolean.TRUE.equals(request.isCustom()));
+        tx.setCustomExchangeRate(request.customExchangeRate());
+        
+        String category = request.category();
+        if (category == null || category.isBlank()) {
+            category = detectCategory(tx.getSymbol());
+        }
+        tx.setCategory(category.toUpperCase());
 
         Transaction saved = transactionRepository.save(tx);
         
         recalculateAssetHolding(userId, saved.getSymbol());
+
+        if (Boolean.TRUE.equals(request.isCustom()) && request.currentPrice() != null) {
+            assetRepository.findByUserIdAndSymbolIgnoreCase(userId, saved.getSymbol())
+                    .ifPresent(asset -> {
+                        asset.setCurrentPrice(request.currentPrice());
+                        asset.setCurrentValue(asset.getQuantity().multiply(request.currentPrice()));
+                        assetRepository.save(asset);
+                    });
+        }
         
         return toResponse(saved);
     }
@@ -115,19 +141,63 @@ public class TransactionService {
         BigDecimal totalCost = BigDecimal.ZERO;
         BigDecimal lastPrice = BigDecimal.ZERO;
 
+        // Determine native currency of the asset
+        final String assetNativeCurrency;
+        if (chronologicalTxs.stream().anyMatch(Transaction::isCustom)) {
+            assetNativeCurrency = chronologicalTxs.get(0).getCurrency() != null ? 
+                    chronologicalTxs.get(0).getCurrency().toUpperCase() : "USD";
+        } else {
+            assetNativeCurrency = isBursa(symbol) ? "MYR" : "USD";
+        }
+
+        // Check if any transaction is in a different currency
+        boolean needsExchangeRate = chronologicalTxs.stream()
+                .anyMatch(t -> !assetNativeCurrency.equalsIgnoreCase(t.getCurrency()));
+
+        BigDecimal usdToMyrRate = BigDecimal.valueOf(4.70); // default fallback
+        if (needsExchangeRate) {
+            try {
+                // Fetch live exchange rate from MarketDataService
+                Map<String, Double> rates = marketDataService.getBatchPrices(List.of("USD/MYR"));
+                Double rate = rates.get("USD/MYR");
+                if (rate != null && rate > 0.0) {
+                    usdToMyrRate = BigDecimal.valueOf(rate);
+                }
+            } catch (Exception e) {
+                log.error("Failed to fetch USD/MYR rate during holding recalculation, using fallback 4.70: {}", e.getMessage());
+            }
+        }
+
         for (Transaction t : chronologicalTxs) {
             BigDecimal tQty = t.getQuantity() != null ? t.getQuantity() : BigDecimal.ZERO;
             BigDecimal tAmt = t.getAmount() != null ? t.getAmount() : BigDecimal.ZERO;
+            String txCurrency = t.getCurrency() != null ? t.getCurrency().toUpperCase() : "USD";
+
+            // Convert transaction amount/price to asset native currency if they differ
+            BigDecimal tAmtNative = tAmt;
+            if (!txCurrency.equalsIgnoreCase(assetNativeCurrency)) {
+                BigDecimal currentRate = usdToMyrRate;
+                if (t.getCustomExchangeRate() != null && t.getCustomExchangeRate().compareTo(BigDecimal.ZERO) > 0) {
+                    currentRate = t.getCustomExchangeRate();
+                }
+                if (txCurrency.equals("MYR") && assetNativeCurrency.equals("USD")) {
+                    // Convert MYR to USD by dividing by rate
+                    tAmtNative = tAmt.divide(currentRate, 4, RoundingMode.HALF_UP);
+                } else if (txCurrency.equals("USD") && assetNativeCurrency.equals("MYR")) {
+                    // Convert USD to MYR by multiplying by rate
+                    tAmtNative = tAmt.multiply(currentRate).setScale(4, RoundingMode.HALF_UP);
+                }
+            }
 
             BigDecimal tPrice = BigDecimal.ZERO;
             if (tQty.compareTo(BigDecimal.ZERO) > 0) {
-                tPrice = tAmt.divide(tQty, 4, RoundingMode.HALF_UP);
+                tPrice = tAmtNative.divide(tQty, 4, RoundingMode.HALF_UP);
                 lastPrice = tPrice;
             }
 
             if (t.getType() == TransactionType.BUY) {
                 qty = qty.add(tQty);
-                totalCost = totalCost.add(tAmt);
+                totalCost = totalCost.add(tAmtNative);
             } else if (t.getType() == TransactionType.SELL) {
                 if (qty.compareTo(BigDecimal.ZERO) > 0) {
                     BigDecimal avgBeforeSell = totalCost.divide(qty, 4, RoundingMode.HALF_UP);
@@ -152,13 +222,26 @@ public class TransactionService {
 
         BigDecimal avgPrice = totalCost.divide(qty, 4, RoundingMode.HALF_UP);
 
+        // Find the latest non-null category from the chronological transactions
+        String txCategory = null;
+        for (int i = chronologicalTxs.size() - 1; i >= 0; i--) {
+            if (chronologicalTxs.get(i).getCategory() != null) {
+                txCategory = chronologicalTxs.get(i).getCategory();
+                break;
+            }
+        }
+        if (txCategory == null) {
+            txCategory = detectCategory(symbol);
+        }
+
         if (asset == null) {
             asset = new Asset();
             asset.setUser(chronologicalTxs.get(0).getUser());
             asset.setSymbol(symbol.toUpperCase());
             asset.setName(symbol.toUpperCase());
-            asset.setCategory(AssetCategory.STOCK);
         }
+        asset.setCategory(parseAssetCategory(txCategory));
+        asset.setCustom(chronologicalTxs.stream().anyMatch(Transaction::isCustom));
 
         asset.setQuantity(qty);
         asset.setAvgPrice(avgPrice);
@@ -166,6 +249,7 @@ public class TransactionService {
             asset.setCurrentPrice(lastPrice);
         }
         asset.setCurrentValue(qty.multiply(asset.getCurrentPrice()));
+        asset.setCurrency(assetNativeCurrency);
         assetRepository.save(asset);
     }
 
@@ -191,7 +275,11 @@ public class TransactionService {
                 tx.getSymbol(),
                 tx.getQuantity(),
                 price.setScale(2, RoundingMode.HALF_UP),
-                totalAmount.setScale(2, RoundingMode.HALF_UP)
+                totalAmount.setScale(2, RoundingMode.HALF_UP),
+                tx.getCurrency() != null ? tx.getCurrency().toUpperCase() : "USD",
+                tx.getCategory(),
+                tx.isCustom(),
+                tx.getCustomExchangeRate()
         );
     }
 
@@ -203,6 +291,37 @@ public class TransactionService {
             return TransactionType.valueOf(type.toUpperCase());
         } catch (IllegalArgumentException e) {
             return TransactionType.BUY;
+        }
+    }
+
+    private boolean isBursa(String symbol) {
+        if (symbol == null) return false;
+        String s = symbol.trim().toUpperCase();
+        return s.endsWith(".KL") || s.endsWith(".KLSE") || s.endsWith(".XKLS");
+    }
+
+    private String detectCategory(String symbol) {
+        if (symbol == null || symbol.isBlank()) {
+            return "STOCK";
+        }
+        String s = symbol.trim().toUpperCase();
+        if (s.endsWith(".KL") || s.endsWith(".KLSE") || s.endsWith(".XKLS")) {
+            return "STOCK";
+        }
+        if (s.contains("/") || s.endsWith("USD") || s.equals("BTC") || s.equals("ETH") || s.equals("SOL") || s.equals("DOGE")) {
+            return "CRYPTO";
+        }
+        return "STOCK";
+    }
+
+    private AssetCategory parseAssetCategory(String category) {
+        if (category == null || category.isBlank()) {
+            return AssetCategory.STOCK;
+        }
+        try {
+            return AssetCategory.valueOf(category.toUpperCase().replace(" ", "_"));
+        } catch (IllegalArgumentException e) {
+            return AssetCategory.STOCK;
         }
     }
 }

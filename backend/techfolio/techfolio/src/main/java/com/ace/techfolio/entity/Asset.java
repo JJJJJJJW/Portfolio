@@ -77,6 +77,13 @@ public class Asset {
     @Column(name = "purchase_date")
     private LocalDate purchaseDate;
 
+    @Column(name = "is_custom", nullable = false)
+    private boolean isCustom = false;
+
+    @Size(max = 3)
+    @Column(name = "currency", nullable = false, length = 3)
+    private String currency = "USD";
+
     @Size(max = 500)
     @Column(name = "notes", length = 500)
     private String notes;
@@ -208,6 +215,22 @@ public class Asset {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
+
+    public boolean isCustom() {
+        return isCustom;
+    }
+
+    public void setCustom(boolean custom) {
+        this.isCustom = custom;
     }
 
     public LocalDateTime getCreatedAt() {

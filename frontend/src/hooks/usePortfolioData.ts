@@ -15,6 +15,7 @@ interface UsePortfolioDataReturn {
   setPositions: React.Dispatch<React.SetStateAction<GuestPosition[]>>;
   setTransactions: React.Dispatch<React.SetStateAction<GuestTransaction[]>>;
   addTransaction: (tx: GuestTransaction, updatedPositions: GuestPosition[]) => void;
+  updateAssetPrice: (assetId: string, newPrice: number) => Promise<void>;
   refetch: () => Promise<void>;
   isGuest: boolean;
   loading: boolean;
@@ -65,6 +66,9 @@ export function usePortfolioData(): UsePortfolioDataReturn {
             currentPrice: Number(a.currentPrice),
             totalValue: Number(a.totalValue),
             pl: Number(a.pl),
+            isCustom: a.isCustom as boolean,
+            category: a.category as string,
+            currency: (a.currency as "USD" | "MYR") || "USD",
           }))
         );
       } else {
@@ -82,6 +86,10 @@ export function usePortfolioData(): UsePortfolioDataReturn {
             quantity: Number(t.quantity),
             price: Number(t.price),
             totalAmount: Number(t.totalAmount),
+            currency: (t.currency as "USD" | "MYR") || "USD",
+            category: t.category as string,
+            isCustom: t.isCustom as boolean,
+            customExchangeRate: t.customExchangeRate ? Number(t.customExchangeRate) : undefined,
           }))
         );
       } else {
@@ -124,6 +132,11 @@ export function usePortfolioData(): UsePortfolioDataReturn {
               quantity: tx.quantity,
               price: tx.price,
               date: tx.date,
+              currency: tx.currency,
+              category: tx.category,
+              isCustom: tx.isCustom,
+              currentPrice: tx.currentPrice,
+              customExchangeRate: tx.customExchangeRate,
             }),
           });
 
@@ -150,6 +163,9 @@ export function usePortfolioData(): UsePortfolioDataReturn {
                   currentPrice: Number(a.currentPrice),
                   totalValue: Number(a.totalValue),
                   pl: Number(a.pl),
+                  isCustom: a.isCustom as boolean,
+                  category: a.category as string,
+                  currency: (a.currency as "USD" | "MYR") || "USD",
                 }))
               );
             }
@@ -165,6 +181,10 @@ export function usePortfolioData(): UsePortfolioDataReturn {
                   quantity: Number(t.quantity),
                   price: Number(t.price),
                   totalAmount: Number(t.totalAmount),
+                  currency: (t.currency as "USD" | "MYR") || "USD",
+                  category: t.category as string,
+                  isCustom: t.isCustom as boolean,
+                  customExchangeRate: t.customExchangeRate ? Number(t.customExchangeRate) : undefined,
                 }))
               );
             }
@@ -185,5 +205,62 @@ export function usePortfolioData(): UsePortfolioDataReturn {
     [isGuest, session?.access_token]
   );
 
-  return { positions, transactions, setPositions, setTransactions, addTransaction, refetch: fetchData, isGuest, loading };
+  const updateAssetPrice = useCallback(
+    async (assetId: string, newPrice: number) => {
+      if (isGuest) {
+        setPositions((prev) =>
+          prev.map((pos) => {
+            if (pos.id === assetId) {
+              const totalValue = pos.quantity * newPrice;
+              const pl = totalValue - (pos.quantity * pos.avgPrice);
+              return {
+                ...pos,
+                currentPrice: newPrice,
+                totalValue: parseFloat(totalValue.toFixed(2)),
+                pl: parseFloat(pl.toFixed(2)),
+              };
+            }
+            return pos;
+          })
+        );
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/api/v1/assets/${assetId}/price?price=${newPrice}`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+        });
+
+        if (res.ok) {
+          await fetchData();
+        } else {
+          throw new Error("Failed to update custom asset price");
+        }
+      } catch (err) {
+        console.error("Failed to update custom asset price:", err);
+        // Fallback: local update on failure
+        setPositions((prev) =>
+          prev.map((pos) => {
+            if (pos.id === assetId) {
+              const totalValue = pos.quantity * newPrice;
+              const pl = totalValue - (pos.quantity * pos.avgPrice);
+              return {
+                ...pos,
+                currentPrice: newPrice,
+                totalValue: parseFloat(totalValue.toFixed(2)),
+                pl: parseFloat(pl.toFixed(2)),
+              };
+            }
+            return pos;
+          })
+        );
+      }
+    },
+    [isGuest, session?.access_token, fetchData]
+  );
+
+  return { positions, transactions, setPositions, setTransactions, addTransaction, updateAssetPrice, refetch: fetchData, isGuest, loading };
 }

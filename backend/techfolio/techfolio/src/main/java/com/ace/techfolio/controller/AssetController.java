@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -83,6 +84,19 @@ public class AssetController {
             @Valid @RequestBody AssetRequest request) {
         UUID userId = UUID.fromString(jwt.getSubject());
         AssetResponse updated = assetService.updateAsset(userId, id, request);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Update only the current price of an existing custom asset position.
+     */
+    @PutMapping("/{id}/price")
+    public ResponseEntity<AssetResponse> updateAssetPrice(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID id,
+            @RequestParam BigDecimal price) {
+        UUID userId = UUID.fromString(jwt.getSubject());
+        AssetResponse updated = assetService.updateAssetPrice(userId, id, price);
         return ResponseEntity.ok(updated);
     }
 
