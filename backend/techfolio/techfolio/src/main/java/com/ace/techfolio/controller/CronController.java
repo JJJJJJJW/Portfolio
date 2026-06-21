@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Controller exposing cron-triggered endpoints for external job schedulers
@@ -69,15 +70,17 @@ public class CronController {
                     .body(Map.of("error", "Invalid or missing X-Cron-Secret."));
         }
 
-        log.info("Authorized cron request received. Starting EOD snapshot...");
+        log.info("Authorized cron request received. Starting EOD snapshot in background...");
 
-        try {
-            String result = snapshotService.executeSnapshot();
-            return ResponseEntity.ok(Map.of("status", "success", "message", result));
-        } catch (Exception e) {
-            log.error("EOD snapshot failed", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("status", "error", "message", "Snapshot failed: " + e.getMessage()));
-        }
+        CompletableFuture.runAsync(() -> {
+            try {
+                snapshotService.executeSnapshot();
+            } catch (Exception e) {
+                log.error("Asynchronous EOD snapshot failed", e);
+            }
+        });
+
+        return ResponseEntity.accepted()
+                .body(Map.of("status", "accepted", "message", "EOD snapshot triggered in background."));
     }
 }
