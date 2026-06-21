@@ -70,6 +70,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/assets/price").permitAll()
                         .requestMatchers("/api/v1/market/**").permitAll()
                         .requestMatchers("/api/v1/cron/**").permitAll()
+                        .requestMatchers("/api/v1/internal/**").permitAll()
                         .requestMatchers("/api/v1/users/me").authenticated()
                         .anyRequest().authenticated());
 

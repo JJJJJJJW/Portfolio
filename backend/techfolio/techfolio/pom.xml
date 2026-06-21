@@ -81,6 +81,21 @@
 			<artifactId>YahooFinanceAPI</artifactId>
 			<version>3.17.0</version>
 		</dependency>
+
+		<!-- Stock Analyzer: ta4j for local technical indicator calculation (RSI, SMA, EMA, MACD) -->
+		<dependency>
+			<groupId>org.ta4j</groupId>
+			<artifactId>ta4j-core</artifactId>
+			<version>0.16</version>
+		</dependency>
+
+		<!-- Stock Analyzer: Bucket4j for in-memory rate limiting (Polygon.io 5 calls/min) -->
+		<dependency>
+			<groupId>com.bucket4j</groupId>
+			<artifactId>bucket4j_jdk17-core</artifactId>
+			<version>8.14.0</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa-test</artifactId>
