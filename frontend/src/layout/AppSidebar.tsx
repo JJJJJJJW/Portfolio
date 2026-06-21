@@ -6,8 +6,7 @@ import {
   GridIcon,
   HorizontaLDots,
   SparklesIcon,
-  UserCircleIcon,
-  ShootingStarIcon
+  UserCircleIcon
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 type NavItem = {
@@ -25,11 +24,6 @@ const navItems: NavItem[] = [
       { name: "Positions", path: "/positions", pro: false },
       { name: "P/L Calendar", path: "/pl-calendar", pro: false }
     ],
-  },
-  {
-    icon: <ShootingStarIcon />,
-    name: "Goals",
-    path: "/goals",
   },
   {
     icon: <SparklesIcon />,
@@ -50,6 +44,10 @@ const AppSidebar: React.FC = () => {
     type: "main" | "others";
     index: number;
   } | null>(null);
+  const [clickedSubmenu, setClickedSubmenu] = useState<{
+    type: "main" | "others";
+    index: number;
+  } | null>(null);
   const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>(
     {}
   );
@@ -59,25 +57,26 @@ const AppSidebar: React.FC = () => {
     (path: string) => location.pathname === path,
     [location.pathname]
   );
-  useEffect(() => {
-    let submenuMatched = false;
+  const getActiveSubmenu = useCallback(() => {
+    let matched: { type: "main" | "others"; index: number } | null = null;
     navItems.forEach((nav, index) => {
       if (nav.subItems) {
         nav.subItems.forEach((subItem) => {
           if (isActive(subItem.path)) {
-            setOpenSubmenu({
-              type: "main",
-              index,
-            });
-            submenuMatched = true;
+            matched = { type: "main", index };
           }
         });
       }
     });
-    if (!submenuMatched) {
-      setOpenSubmenu(null);
-    }
-  }, [location, isActive]);
+    return matched;
+  }, [isActive]);
+
+  useEffect(() => {
+    const active = getActiveSubmenu();
+    setOpenSubmenu(active);
+    setClickedSubmenu(active);
+  }, [location, getActiveSubmenu]);
+
   useEffect(() => {
     if (openSubmenu !== null) {
       const key = `${openSubmenu.type}-${openSubmenu.index}`;
@@ -89,22 +88,34 @@ const AppSidebar: React.FC = () => {
       }
     }
   }, [openSubmenu]);
+
   const handleSubmenuToggle = (index: number, menuType: "main" | "others") => {
-    setOpenSubmenu((prevOpenSubmenu) => {
-      if (
-        prevOpenSubmenu &&
-        prevOpenSubmenu.type === menuType &&
-        prevOpenSubmenu.index === index
-      ) {
-        return null;
-      }
-      return { type: menuType, index };
+    setClickedSubmenu((prevClicked) => {
+      const nextClicked = (prevClicked && prevClicked.type === menuType && prevClicked.index === index)
+        ? null
+        : { type: menuType, index };
+      
+      setOpenSubmenu(nextClicked || getActiveSubmenu());
+      return nextClicked;
     });
   };
+
   const renderMenuItems = (items: NavItem[], menuType: "main" | "others") => (
     <ul className="flex flex-col gap-4">
       {items.map((nav, index) => (
-        <li key={nav.name}>
+        <li
+          key={nav.name}
+          onMouseEnter={() => {
+            if (nav.subItems) {
+              setOpenSubmenu({ type: menuType, index });
+            }
+          }}
+          onMouseLeave={() => {
+            if (nav.subItems) {
+              setOpenSubmenu(clickedSubmenu || getActiveSubmenu());
+            }
+          }}
+        >
           {nav.subItems ? (
             <button
               onClick={() => handleSubmenuToggle(index, menuType)}

@@ -21,5 +21,16 @@ public record DashboardSummaryResponse(
         List<BigDecimal> monthlySeries,
         List<String> dailyCategories,
         List<BigDecimal> dailySeries,
-        String baseCurrency
+        String baseCurrency,
+        String topPerformerSymbol,
+        BigDecimal topPerformerPct,
+        BigDecimal topPerformerVal,
+        String worstPerformerSymbol,
+        BigDecimal worstPerformerPct,
+        BigDecimal worstPerformerVal,
+        BigDecimal tradeWinRate,
+        Integer profitableSells,
+        Integer totalSells,
+        List<String> currencyDistributionLabels,
+        List<Double> currencyDistributionSeries
 ) {}

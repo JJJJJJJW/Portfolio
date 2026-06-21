@@ -19,7 +19,6 @@ import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Finance from "./pages/Dashboard/Finance";
 import Positions from "./pages/Dashboard/Positions";
-import Goals from "./pages/Goals/Goals";
 import Advisor from "./pages/Advisor/Advisor";
 
 export default function App() {
@@ -34,7 +33,6 @@ export default function App() {
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<Finance />} />
             <Route path="/positions" element={<Positions />} />
-            <Route path="/goals" element={<Goals />} />
             <Route path="/advisor" element={<Advisor />} />
 
             {/* Others Page */}

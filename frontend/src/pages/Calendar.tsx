@@ -6,6 +6,8 @@ import { useUser } from "../context/UserContext";
 interface PLEntry {
   pl: number;
   pct: number;
+  realizedPL?: number;
+  unrealizedPL?: number;
 }
 
 // --- Mock Data Generator ---
@@ -57,7 +59,7 @@ const PLCalendar: React.FC = () => {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [isVisible, setIsVisible] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<{ date: string; pl: number; pct: number } | null>(null);
+  const [selectedDay, setSelectedDay] = useState<{ date: string; pl: number; pct: number; realizedPL?: number; unrealizedPL?: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // --- Daily Snapshots State & Fetching for Authenticated Users ---
@@ -81,11 +83,16 @@ const PLCalendar: React.FC = () => {
           },
         });
         if (res.ok) {
-          const data: { date: string; pl: number; pct: number }[] = await res.json();
+          const data: { date: string; pl: number; pct: number; realizedPL?: number; unrealizedPL?: number }[] = await res.json();
           const mapped: Record<string, PLEntry> = {};
           data.forEach(item => {
             const dateStr = item.date.substring(0, 10);
-            mapped[dateStr] = { pl: item.pl, pct: item.pct };
+            mapped[dateStr] = {
+              pl: item.pl,
+              pct: item.pct,
+              realizedPL: item.realizedPL,
+              unrealizedPL: item.unrealizedPL,
+            };
           });
           setSnapshots(mapped);
         }
@@ -98,6 +105,20 @@ const PLCalendar: React.FC = () => {
 
     fetchSnapshots();
   }, [isAuthenticated, session?.access_token, API_URL]);
+
+  // Listen for Escape key to close the day detail popup
+  useEffect(() => {
+    if (!selectedDay) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSelectedDay(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedDay]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -124,8 +145,12 @@ const PLCalendar: React.FC = () => {
       const yearlyResults: Record<string, PLEntry> = {};
       const monthlyPL: Record<string, { pl: number; pctSum: number; count: number }> = {};
 
-      // Initialize all months of the year
+      const now = new Date();
+      // Initialize only non-future months of the year
       for (let m = 0; m < 12; m++) {
+        if (currentYear > now.getFullYear() || (currentYear === now.getFullYear() && m > now.getMonth())) {
+          continue;
+        }
         const monthKey = `${currentYear}-${String(m + 1).padStart(2, "0")}`;
         monthlyPL[monthKey] = { pl: 0, pctSum: 0, count: 0 };
       }
@@ -291,6 +316,9 @@ const PLCalendar: React.FC = () => {
 
   const getIntensityClass = (pl: number) => {
     const abs = Math.abs(pl);
+    if (abs < 0.01) {
+      return "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400";
+    }
     if (pl > 0) {
       if (abs > 800) return "bg-brand-500/25 text-brand-400";
       if (abs > 400) return "bg-brand-500/15 text-brand-400";
@@ -304,6 +332,9 @@ const PLCalendar: React.FC = () => {
 
   const getMonthIntensity = (value: number) => {
     const abs = Math.abs(value);
+    if (abs < 0.01) {
+      return "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/[0.8]";
+    }
     if (value > 0) {
       if (abs > 4000) return "bg-brand-500/25 border-brand-500/30";
       if (abs > 2000) return "bg-brand-500/15 border-brand-500/20";
@@ -333,7 +364,7 @@ const PLCalendar: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">P/L Calendar</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Visualize your daily trading performance at a glance.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Visualize your daily asset performance at a glance.</p>
             </div>
 
             {/* View Toggle */}
@@ -371,7 +402,7 @@ const PLCalendar: React.FC = () => {
             <span className={`text-xl font-bold ${(viewMode === "month" ? monthTotal : yearTotal) >= 0 ? "text-brand-500" : "text-red-500"}`}>
               {formatPLFull(viewMode === "month" ? monthTotal : yearTotal)}
             </span>
-            <span className={`text-xs font-medium block ${(viewMode === "month" ? monthTotalPct : yearTotalPct) >= 0 ? "text-brand-500/70" : "text-red-500/70"}`}>
+            <span className={`text-m font-medium block ${(viewMode === "month" ? monthTotalPct : yearTotalPct) >= 0 ? "text-brand-500/70" : "text-red-500/70"}`}>
               {formatPct(viewMode === "month" ? monthTotalPct : yearTotalPct)}
             </span>
           </div>
@@ -381,16 +412,24 @@ const PLCalendar: React.FC = () => {
               {bestDay ? formatPLFull(bestDay[1].pl) : "—"}
             </span>
             {bestDay && (
-              <span className="text-xs font-medium text-brand-500/70 block">{formatPct(bestDay[1].pct)}</span>
+              <span className="text-m font-medium text-brand-500/70 block">{formatPct(bestDay[1].pct)}</span>
             )}
           </div>
           <div className="bg-white dark:bg-gray-900/[0.8] rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
             <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Worst Day</span>
-            <span className="text-xl font-bold text-red-500">
+            <span className={`text-xl font-bold ${
+              worstDay && worstDay[1].pl < 0 
+                ? "text-red-500" 
+                : (worstDay && worstDay[1].pl > 0 ? "text-brand-500" : "text-gray-400 dark:text-gray-500")
+            }`}>
               {worstDay ? formatPLFull(worstDay[1].pl) : "—"}
             </span>
             {worstDay && (
-              <span className="text-xs font-medium text-red-500/70 block">{formatPct(worstDay[1].pct)}</span>
+              <span className={`text-m font-medium block ${
+                worstDay[1].pl < 0 
+                  ? "text-red-500/70" 
+                  : (worstDay[1].pl > 0 ? "text-brand-500/70" : "text-gray-400/70 dark:text-gray-500/70")
+              }`}>{formatPct(worstDay[1].pct)}</span>
             )}
           </div>
         </div>
@@ -432,12 +471,14 @@ const PLCalendar: React.FC = () => {
                     </svg>
                   </button>
                 </div>
-                <button
-                  onClick={goToday}
-                  className="px-3 py-1.5 text-xs font-medium text-brand-500 border border-brand-500/30 bg-brand-500/5 rounded-lg hover:bg-brand-500/10 transition-colors"
-                >
-                  Today
-                </button>
+                {viewMode === "month" && (
+                  <button
+                    onClick={goToday}
+                    className="px-3 py-1.5 text-xs font-medium text-brand-500 border border-brand-500/30 bg-brand-500/5 rounded-lg hover:bg-brand-500/10 transition-colors"
+                  >
+                    Today
+                  </button>
+                )}
               </div>
 
               {/* MONTH VIEW */}
@@ -446,7 +487,7 @@ const PLCalendar: React.FC = () => {
                   {/* Weekday Headers */}
                   <div className="grid grid-cols-7 mb-1">
                     {WEEKDAYS.map((day) => (
-                      <div key={day} className="text-center text-[10px] font-semibold text-gray-500 dark:text-gray-500 uppercase py-1.5">
+                      <div key={day} className="text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase py-1.5">
                         {day}
                       </div>
                     ))}
@@ -462,7 +503,7 @@ const PLCalendar: React.FC = () => {
                       return (
                         <button
                           key={idx}
-                          onClick={() => hasData && cell.isCurrentMonth ? setSelectedDay({ date: cell.dateKey, pl: entry.pl, pct: entry.pct }) : null}
+                          onClick={() => hasData && cell.isCurrentMonth ? setSelectedDay({ date: cell.dateKey, pl: entry.pl, pct: entry.pct, realizedPL: entry.realizedPL, unrealizedPL: entry.unrealizedPL }) : null}
                           className={`
                             relative py-4 rounded-lg flex flex-col items-center justify-center gap-0.5 transition-all text-center
                             ${!cell.isCurrentMonth ? "opacity-30" : ""}
@@ -471,7 +512,7 @@ const PLCalendar: React.FC = () => {
                             ${today ? "ring-2 ring-brand-500" : ""}
                           `}
                         >
-                          <span className={`text-xs font-medium ${
+                          <span className={`text-sm font-bold ${
                             today ? "text-brand-500" :
                             cell.isCurrentMonth ? "text-gray-600 dark:text-gray-300" : "text-gray-400 dark:text-gray-600"
                           }`}>
@@ -479,10 +520,14 @@ const PLCalendar: React.FC = () => {
                           </span>
                           {hasData && cell.isCurrentMonth && (
                             <>
-                              <span className="text-[10px] font-bold leading-none">
+                              <span className="text-[12px] font-bold leading-none">
                                 {formatPL(entry.pl)}
                               </span>
-                              <span className={`text-[9px] font-semibold leading-none ${entry.pct >= 0 ? "text-brand-500/60" : "text-red-500/60"}`}>
+                              <span className={`text-[12px] font-semibold leading-none ${
+                                Math.abs(entry.pct) < 0.01 
+                                  ? "text-gray-400/60 dark:text-gray-500/60" 
+                                  : (entry.pct >= 0 ? "text-brand-500/60" : "text-red-500/60")
+                              }`}>
                                 {formatPctShort(entry.pct)}
                               </span>
                             </>
@@ -545,10 +590,18 @@ const PLCalendar: React.FC = () => {
                           </span>
                           {hasData ? (
                             <>
-                              <span className={`text-lg font-bold block ${entry.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                              <span className={`text-lg font-bold block ${
+                                Math.abs(entry.pl) < 0.01 
+                                  ? "text-gray-400 dark:text-gray-500" 
+                                  : (entry.pl > 0 ? "text-brand-500" : "text-red-500")
+                              }`}>
                                 {formatPLFull(entry.pl)}
                               </span>
-                              <span className={`text-xs font-medium ${entry.pct >= 0 ? "text-brand-500/70" : "text-red-500/70"}`}>
+                              <span className={`text-xs font-medium ${
+                                Math.abs(entry.pct) < 0.01 
+                                  ? "text-gray-400/70 dark:text-gray-500/70" 
+                                  : (entry.pct > 0 ? "text-brand-500/70" : "text-red-500/70")
+                              }`}>
                                 {formatPct(entry.pct)}
                               </span>
                             </>
@@ -576,8 +629,14 @@ const PLCalendar: React.FC = () => {
 
       {/* Day Detail Popup */}
       {selectedDay && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+        <div 
+          onClick={() => setSelectedDay(null)}
+          className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200"
+          >
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-gray-800">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Daily P/L</h3>
@@ -595,30 +654,44 @@ const PLCalendar: React.FC = () => {
 
             <div className="p-5 space-y-4">
               <div className="text-center py-4">
-                <span className={`text-4xl font-bold ${selectedDay.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                <span className={`text-4xl font-bold ${
+                  Math.abs(selectedDay.pl) < 0.01 
+                    ? "text-gray-400 dark:text-gray-500" 
+                    : (selectedDay.pl > 0 ? "text-brand-500" : "text-red-500")
+                }`}>
                   {formatPLFull(selectedDay.pl)}
                 </span>
-                <span className={`text-lg font-semibold block mt-0.5 ${selectedDay.pct >= 0 ? "text-brand-500/70" : "text-red-500/70"}`}>
+                <span className={`text-lg font-semibold block mt-0.5 ${
+                  Math.abs(selectedDay.pct) < 0.01 
+                    ? "text-gray-400/70 dark:text-gray-500/70" 
+                    : (selectedDay.pct > 0 ? "text-brand-500/70" : "text-red-500/70")
+                }`}>
                   {formatPct(selectedDay.pct)}
                 </span>
-                <p className={`text-sm mt-1 ${selectedDay.pl >= 0 ? "text-brand-500/70" : "text-red-500/70"}`}>
-                  {selectedDay.pl >= 0 ? "Profitable Day ✓" : "Loss Day ✗"}
+                <p className={`text-sm mt-1 ${
+                  Math.abs(selectedDay.pl) < 0.01 
+                    ? "text-gray-400/70 dark:text-gray-500/70" 
+                    : (selectedDay.pl > 0 ? "text-brand-500/70" : "text-red-500/70")
+                }`}>
+                  {Math.abs(selectedDay.pl) < 0.01 
+                    ? "Neutral Day •" 
+                    : (selectedDay.pl > 0 ? "Profitable Day ✓" : "Loss Day ✗")}
                 </p>
               </div>
 
-              {/* Mock Breakdown */}
+              {/* Breakdown */}
               <div className="space-y-2">
                 <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Breakdown</h4>
                 <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-3 flex items-center justify-between border border-gray-100 dark:border-gray-800/60">
                   <span className="text-sm text-gray-700 dark:text-gray-300">Realized P/L</span>
-                  <span className={`text-sm font-bold ${selectedDay.pl * 0.6 >= 0 ? "text-brand-500" : "text-red-500"}`}>
-                    {formatPLFull(Math.round(selectedDay.pl * 0.6 * 100) / 100)}
+                  <span className={`text-sm font-bold ${(selectedDay.realizedPL !== undefined ? selectedDay.realizedPL : selectedDay.pl * 0.6) >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                    {formatPLFull(selectedDay.realizedPL !== undefined ? selectedDay.realizedPL : Math.round(selectedDay.pl * 0.6 * 100) / 100)}
                   </span>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-3 flex items-center justify-between border border-gray-100 dark:border-gray-800/60">
                   <span className="text-sm text-gray-700 dark:text-gray-300">Unrealized P/L</span>
-                  <span className={`text-sm font-bold ${selectedDay.pl * 0.4 >= 0 ? "text-brand-500" : "text-red-500"}`}>
-                    {formatPLFull(Math.round(selectedDay.pl * 0.4 * 100) / 100)}
+                  <span className={`text-sm font-bold ${(selectedDay.unrealizedPL !== undefined ? selectedDay.unrealizedPL : selectedDay.pl * 0.4) >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                    {formatPLFull(selectedDay.unrealizedPL !== undefined ? selectedDay.unrealizedPL : Math.round(selectedDay.pl * 0.4 * 100) / 100)}
                   </span>
                 </div>
               </div>

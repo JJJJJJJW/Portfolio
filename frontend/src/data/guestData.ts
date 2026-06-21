@@ -55,80 +55,6 @@ export const GUEST_TRANSACTIONS: GuestTransaction[] = [
 ];
 
 // =========================================================================
-// Goals
-// =========================================================================
-
-import type { FinancialGoal } from "../pages/Goals/types";
-
-export const GUEST_GOALS: FinancialGoal[] = [
-  {
-    id: "g1",
-    name: "Emergency Fund (6 Months)",
-    category: "Emergency Fund",
-    targetAmount: 15000,
-    currentAmount: 12000,
-    targetDate: "2026-10-01",
-    createdDate: "2026-01-01",
-    contributions: [
-      { id: "c1", amount: 5000, date: "2026-01-10", note: "Initial Transfer" },
-      { id: "c2", amount: 4000, date: "2026-03-05", note: "Bonus savings" },
-      { id: "c3", amount: 3000, date: "2026-05-20", note: "Monthly contribution" },
-    ],
-  },
-  {
-    id: "g2",
-    name: "Retirement Fund Core",
-    category: "Retirement",
-    targetAmount: 250000,
-    currentAmount: 85000,
-    targetDate: "2045-12-31",
-    createdDate: "2024-01-01",
-    contributions: [
-      { id: "c4", amount: 80000, date: "2025-12-31", note: "Rollover amount" },
-      { id: "c5", amount: 5000, date: "2026-04-15", note: "Yearly deposit" },
-    ],
-  },
-  {
-    id: "g3",
-    name: "Holiday Trip to Japan",
-    category: "Travel",
-    targetAmount: 6000,
-    currentAmount: 4800,
-    targetDate: "2026-07-15",
-    createdDate: "2026-01-15",
-    contributions: [
-      { id: "c6", amount: 2000, date: "2026-02-01", note: "Flight booking fund" },
-      { id: "c7", amount: 2800, date: "2026-05-10", note: "Hotel and food pocket money" },
-    ],
-  },
-  {
-    id: "g4",
-    name: "Crypto Portfolio Base",
-    category: "Investment",
-    targetAmount: 10000,
-    currentAmount: 10000,
-    targetDate: "2026-05-01",
-    createdDate: "2025-05-01",
-    contributions: [
-      { id: "c8", amount: 5000, date: "2025-08-01", note: "Buying BTC" },
-      { id: "c9", amount: 5000, date: "2026-04-20", note: "Buying ETH" },
-    ],
-  },
-  {
-    id: "g5",
-    name: "Credit Card Debt Clearance",
-    category: "Debt Payoff",
-    targetAmount: 4000,
-    currentAmount: 1200,
-    targetDate: "2026-06-30",
-    createdDate: "2026-01-01",
-    contributions: [
-      { id: "c10", amount: 1200, date: "2026-02-15", note: "Tax return payout" },
-    ],
-  },
-];
-
-// =========================================================================
 // Dashboard Finance Metrics
 // =========================================================================
 
@@ -182,4 +108,18 @@ export interface GuestAssetClassData {
 export const GUEST_ASSET_CLASS_DATA: GuestAssetClassData = {
   labels: ["Equities", "Bonds", "Real Estate", "Cash", "Crypto"],
   series: [45, 20, 15, 10, 10],
+};
+
+// =========================================================================
+// Currency Exposure (Pie Chart) Data
+// =========================================================================
+
+export interface GuestCurrencyData {
+  labels: string[];
+  series: number[];
+}
+
+export const GUEST_CURRENCY_DATA: GuestCurrencyData = {
+  labels: ["USD", "MYR", "SGD", "EUR"],
+  series: [65.0, 25.0, 7.0, 3.0],
 };
