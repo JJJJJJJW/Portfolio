@@ -133,7 +133,7 @@ public class PortfolioSnapshotService {
                                 WHEN COALESCE(NULLIF(u.currency, ''), 'USD') = 'USD' AND COALESCE(NULLIF(a.currency, ''), 'USD') = 'MYR' THEN (a.quantity * a.current_price) / ?
                                 ELSE a.quantity * a.current_price
                             END
-                        ), 0) AS current_total_value,
+                        ), 0)::numeric AS current_total_value,
                         COALESCE(SUM(
                             CASE
                                 WHEN COALESCE(NULLIF(a.currency, ''), 'USD') = COALESCE(NULLIF(u.currency, ''), 'USD') THEN a.quantity * a.avg_price
@@ -141,7 +141,7 @@ public class PortfolioSnapshotService {
                                 WHEN COALESCE(NULLIF(u.currency, ''), 'USD') = 'USD' AND COALESCE(NULLIF(a.currency, ''), 'USD') = 'MYR' THEN (a.quantity * a.avg_price) / ?
                                 ELSE a.quantity * a.avg_price
                             END
-                        ), 0) AS current_total_cost
+                        ), 0)::numeric AS current_total_cost
                     FROM assets a
                     JOIN app_users u ON u.id = a.user_id
                     WHERE a.quantity > 0
@@ -163,7 +163,7 @@ public class PortfolioSnapshotService {
                     CASE
                         WHEN COALESCE(prev.total_value, 0) > 0 THEN
                             ROUND(
-                                ((agg.current_total_value - prev.total_value) / prev.total_value) * 100, 4
+                                (((agg.current_total_value - prev.total_value) / prev.total_value) * 100)::numeric, 4
                             )
                         ELSE 0
                     END,
