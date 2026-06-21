@@ -358,8 +358,12 @@ public class MarketDataService {
      * </ol>
      */
     public double fetchUsdToMyrRateWithFallback() {
+        return fetchUsdToMyrRateWithFallback(false);
+    }
+
+    public double fetchUsdToMyrRateWithFallback(boolean forceRefresh) {
         long now = System.currentTimeMillis();
-        if (now - usdToMyrRateCacheTime < CACHE_DURATION_MS && usdToMyrRateCache > 0.0) {
+        if (!forceRefresh && now - usdToMyrRateCacheTime < CACHE_DURATION_MS && usdToMyrRateCache > 0.0) {
             log.info("Returning cached USD/MYR exchange rate: {}", usdToMyrRateCache);
             return usdToMyrRateCache;
         }
@@ -412,7 +416,7 @@ public class MarketDataService {
             if (existing.isPresent()) {
                 entity = existing.get();
                 entity.setRate(BigDecimal.valueOf(rate));
-                entity.setFetchedAt(java.time.LocalDateTime.now());
+                entity.setFetchedAt(java.time.Instant.now());
                 log.info("Updating existing exchange rate for {} to {}", cleanSymbol, rate);
             } else {
                 entity = new ExchangeRate(cleanSymbol, BigDecimal.valueOf(rate));
@@ -429,10 +433,14 @@ public class MarketDataService {
      * Uses fetchUsdToMyrRateWithFallback() first to ensure we check/refresh cache if needed.
      */
     public ExchangeRateResponse getLatestExchangeRate(String symbol) {
+        return getLatestExchangeRate(symbol, false);
+    }
+
+    public ExchangeRateResponse getLatestExchangeRate(String symbol, boolean refresh) {
         String cleanSymbol = symbol.trim().toUpperCase();
         if ("USD/MYR".equals(cleanSymbol)) {
             // Trigger cache check or live fetch
-            fetchUsdToMyrRateWithFallback();
+            fetchUsdToMyrRateWithFallback(refresh);
         }
 
         Optional<ExchangeRate> latest = exchangeRateRepository.findFirstBySymbolOrderByFetchedAtDesc(cleanSymbol);
@@ -442,6 +450,6 @@ public class MarketDataService {
         }
 
         // Hard fallback if DB has absolutely no record
-        return new ExchangeRateResponse(cleanSymbol, BigDecimal.valueOf(4.70), java.time.LocalDateTime.now());
+        return new ExchangeRateResponse(cleanSymbol, BigDecimal.valueOf(4.70), java.time.Instant.now());
     }
 }

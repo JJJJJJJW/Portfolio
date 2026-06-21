@@ -1,6 +1,7 @@
 package com.ace.techfolio.service;
 
 import com.ace.techfolio.entity.Asset;
+import com.ace.techfolio.entity.enums.AssetCategory;
 import com.ace.techfolio.repository.AssetRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +77,7 @@ public class PortfolioSnapshotService {
         int updatedCount = 0;
 
         for (Asset asset : assets) {
+            if (asset.getCategory() == AssetCategory.OTHER) continue;
             if (asset.getSymbol() == null || asset.getSymbol().isBlank()) continue;
 
             String sym = asset.getSymbol().trim().toUpperCase();
@@ -98,7 +100,17 @@ public class PortfolioSnapshotService {
         // Step 4: Insert snapshot rows per user
         //   Aggregates total_value and total_cost per user from the refreshed assets,
         //   compares against the previous day's snapshot for daily P/L calculation.
-        int snapshotCount = insertSnapshots(today);
+        double usdToMyrRate = 4.70;
+        try {
+            Double rate = marketDataService.getBatchPrices(List.of("USD/MYR")).get("USD/MYR");
+            if (rate != null && rate > 0.0) {
+                usdToMyrRate = rate;
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch live USD/MYR rate for snapshot, using fallback 4.70", e);
+        }
+
+        int snapshotCount = insertSnapshots(today, usdToMyrRate);
         log.info("Inserted/updated {} user snapshot rows for {}", snapshotCount, today);
 
         String summary = String.format(
@@ -109,12 +121,32 @@ public class PortfolioSnapshotService {
         return summary;
     }
 
-    /**
-     * Inserts one snapshot row per user by aggregating their refreshed asset values.
-     * Uses raw SQL with UPSERT for efficiency and to compute daily P/L in a single query.
-     */
-    private int insertSnapshots(LocalDate today) {
+    private int insertSnapshots(LocalDate today, double usdToMyrRate) {
         String sql = """
+                WITH aggregated AS (
+                    SELECT
+                        a.user_id,
+                        COALESCE(SUM(
+                            CASE
+                                WHEN COALESCE(NULLIF(a.currency, ''), 'USD') = COALESCE(NULLIF(u.currency, ''), 'USD') THEN a.quantity * a.current_price
+                                WHEN COALESCE(NULLIF(u.currency, ''), 'USD') = 'MYR' AND COALESCE(NULLIF(a.currency, ''), 'USD') = 'USD' THEN (a.quantity * a.current_price) * ?
+                                WHEN COALESCE(NULLIF(u.currency, ''), 'USD') = 'USD' AND COALESCE(NULLIF(a.currency, ''), 'USD') = 'MYR' THEN (a.quantity * a.current_price) / ?
+                                ELSE a.quantity * a.current_price
+                            END
+                        ), 0) AS current_total_value,
+                        COALESCE(SUM(
+                            CASE
+                                WHEN COALESCE(NULLIF(a.currency, ''), 'USD') = COALESCE(NULLIF(u.currency, ''), 'USD') THEN a.quantity * a.avg_price
+                                WHEN COALESCE(NULLIF(u.currency, ''), 'USD') = 'MYR' AND COALESCE(NULLIF(a.currency, ''), 'USD') = 'USD' THEN (a.quantity * a.avg_price) * ?
+                                WHEN COALESCE(NULLIF(u.currency, ''), 'USD') = 'USD' AND COALESCE(NULLIF(a.currency, ''), 'USD') = 'MYR' THEN (a.quantity * a.avg_price) / ?
+                                ELSE a.quantity * a.avg_price
+                            END
+                        ), 0) AS current_total_cost
+                    FROM assets a
+                    JOIN app_users u ON u.id = a.user_id
+                    WHERE a.quantity > 0
+                    GROUP BY a.user_id
+                )
                 INSERT INTO portfolio_daily_snapshots (
                     id, user_id, snapshot_date,
                     total_value, total_cost,
@@ -123,26 +155,23 @@ public class PortfolioSnapshotService {
                 )
                 SELECT
                     gen_random_uuid(),
-                    a.user_id,
+                    agg.user_id,
                     ?::date,
-                    COALESCE(SUM(a.quantity * a.current_price), 0),
-                    COALESCE(SUM(a.quantity * a.avg_price), 0),
-                    COALESCE(SUM(a.quantity * a.current_price), 0) - COALESCE(prev.total_value, 0),
+                    agg.current_total_value,
+                    agg.current_total_cost,
+                    agg.current_total_value - COALESCE(prev.total_value, 0),
                     CASE
                         WHEN COALESCE(prev.total_value, 0) > 0 THEN
                             ROUND(
-                                ((COALESCE(SUM(a.quantity * a.current_price), 0) - prev.total_value)
-                                 / prev.total_value) * 100, 4
+                                ((agg.current_total_value - prev.total_value) / prev.total_value) * 100, 4
                             )
                         ELSE 0
                     END,
                     NOW()
-                FROM assets a
+                FROM aggregated agg
                 LEFT JOIN portfolio_daily_snapshots prev
-                    ON prev.user_id = a.user_id
+                    ON prev.user_id = agg.user_id
                     AND prev.snapshot_date = (?::date - INTERVAL '1 day')
-                WHERE a.quantity > 0
-                GROUP BY a.user_id, prev.total_value
                 ON CONFLICT (user_id, snapshot_date)
                 DO UPDATE SET
                     total_value  = EXCLUDED.total_value,
@@ -152,6 +181,14 @@ public class PortfolioSnapshotService {
                     created_at   = NOW()
                 """;
 
-        return jdbcTemplate.update(sql, today.toString(), today.toString());
+        return jdbcTemplate.update(
+                sql,
+                usdToMyrRate,
+                usdToMyrRate,
+                usdToMyrRate,
+                usdToMyrRate,
+                today.toString(),
+                today.toString()
+        );
     }
 }

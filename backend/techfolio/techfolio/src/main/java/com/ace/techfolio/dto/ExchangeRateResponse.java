@@ -1,7 +1,7 @@
 package com.ace.techfolio.dto;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * Response DTO mapping for currency exchange rate data.
@@ -9,5 +9,5 @@ import java.time.LocalDateTime;
 public record ExchangeRateResponse(
         String symbol,
         BigDecimal rate,
-        LocalDateTime fetchedAt
+        Instant fetchedAt
 ) {}

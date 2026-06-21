@@ -10,7 +10,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -32,16 +32,16 @@ public class ExchangeRate {
     private BigDecimal rate;
 
     @Column(name = "fetched_at", nullable = false)
-    private LocalDateTime fetchedAt;
+    private Instant fetchedAt;
 
     @PrePersist
     protected void onCreate() {
-        this.fetchedAt = LocalDateTime.now();
+        this.fetchedAt = Instant.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.fetchedAt = LocalDateTime.now();
+        this.fetchedAt = Instant.now();
     }
 
     public ExchangeRate() {
@@ -76,11 +76,11 @@ public class ExchangeRate {
         this.rate = rate;
     }
 
-    public LocalDateTime getFetchedAt() {
+    public Instant getFetchedAt() {
         return fetchedAt;
     }
 
-    public void setFetchedAt(LocalDateTime fetchedAt) {
+    public void setFetchedAt(Instant fetchedAt) {
         this.fetchedAt = fetchedAt;
     }
 }

@@ -68,7 +68,7 @@ public class DashboardService {
 
         // Fetch live prices for non-custom assets to avoid database lag
         List<String> symbols = assets.stream()
-                .filter(a -> !a.isCustom())
+                .filter(a -> !a.isCustom() && a.getCategory() != AssetCategory.OTHER)
                 .map(Asset::getSymbol)
                 .filter(s -> s != null && !s.isBlank())
                 .distinct()

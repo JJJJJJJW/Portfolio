@@ -112,9 +112,9 @@ export default function Positions() {
 
   const API_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || "http://localhost:8080";
 
-  const fetchExchangeRate = useCallback(async () => {
+  const fetchExchangeRate = useCallback(async (refresh = false) => {
     try {
-      const res = await fetch(`${API_URL}/api/v1/market/exchange-rate?symbol=USD/MYR`);
+      const res = await fetch(`${API_URL}/api/v1/market/exchange-rate?symbol=USD/MYR${refresh ? "&refresh=true" : ""}`);
       if (res.ok) {
         const data = await res.json();
         if (data && data.rate > 0) {
@@ -147,7 +147,7 @@ export default function Positions() {
     try {
       await Promise.all([
         refetch(),
-        fetchExchangeRate()
+        fetchExchangeRate(true)
       ]);
       setToast({ message: "Portfolio prices and exchange rates refreshed successfully!", type: "success" });
     } catch (err) {

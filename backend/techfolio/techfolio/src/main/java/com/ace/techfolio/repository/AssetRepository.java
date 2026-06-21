@@ -34,7 +34,7 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
     /**
      * Find distinct symbols of all assets in positive quantity.
      */
-    @Query("SELECT DISTINCT a.symbol FROM Asset a WHERE a.quantity > 0 AND a.symbol IS NOT NULL AND a.symbol != '' AND a.isCustom = false")
+    @Query("SELECT DISTINCT a.symbol FROM Asset a WHERE a.quantity > 0 AND a.symbol IS NOT NULL AND a.symbol != '' AND a.isCustom = false AND a.category != com.ace.techfolio.entity.enums.AssetCategory.OTHER")
     List<String> findDistinctSymbolsWithPositiveQuantity();
 
     /**

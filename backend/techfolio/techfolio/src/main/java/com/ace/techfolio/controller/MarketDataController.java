@@ -89,7 +89,9 @@ public class MarketDataController {
      * @return latest exchange rate and timestamp
      */
     @GetMapping("/exchange-rate")
-    public ResponseEntity<ExchangeRateResponse> getLatestExchangeRate(@RequestParam(defaultValue = "USD/MYR") String symbol) {
-        return ResponseEntity.ok(marketDataService.getLatestExchangeRate(symbol));
+    public ResponseEntity<ExchangeRateResponse> getLatestExchangeRate(
+            @RequestParam(defaultValue = "USD/MYR") String symbol,
+            @RequestParam(defaultValue = "false") boolean refresh) {
+        return ResponseEntity.ok(marketDataService.getLatestExchangeRate(symbol, refresh));
     }
 }
