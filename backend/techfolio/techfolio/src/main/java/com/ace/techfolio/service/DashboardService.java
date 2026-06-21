@@ -9,6 +9,8 @@ import com.ace.techfolio.entity.enums.TransactionType;
 import com.ace.techfolio.repository.AssetRepository;
 import com.ace.techfolio.repository.TransactionRepository;
 import com.ace.techfolio.repository.UserRepository;
+import com.ace.techfolio.dto.DailyPLResponse;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,15 +28,18 @@ public class DashboardService {
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final MarketDataService marketDataService;
+    private final JdbcTemplate jdbcTemplate;
 
     public DashboardService(AssetRepository assetRepository,
                             TransactionRepository transactionRepository,
                             UserRepository userRepository,
-                            MarketDataService marketDataService) {
+                            MarketDataService marketDataService,
+                            JdbcTemplate jdbcTemplate) {
         this.assetRepository = assetRepository;
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
         this.marketDataService = marketDataService;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Transactional(readOnly = true)
@@ -346,5 +351,21 @@ public class DashboardService {
             case MUTUAL_FUND -> "Mutual Funds";
             default -> "Other";
         };
+    }
+
+    @Transactional(readOnly = true)
+    public List<DailyPLResponse> getDailyPLCalendar(UUID userId) {
+        String sql = """
+                SELECT snapshot_date::text, daily_pl, daily_pl_pct
+                FROM portfolio_daily_snapshots
+                WHERE user_id = ?
+                ORDER BY snapshot_date ASC
+                """;
+
+        return jdbcTemplate.query(sql, (rs, rowNum) -> new DailyPLResponse(
+                rs.getString("snapshot_date"),
+                rs.getDouble("daily_pl"),
+                rs.getDouble("daily_pl_pct")
+        ), userId);
     }
 }
