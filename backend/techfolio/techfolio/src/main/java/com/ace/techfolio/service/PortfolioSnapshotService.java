@@ -159,13 +159,23 @@ public class PortfolioSnapshotService {
                     ?::date,
                     agg.current_total_value,
                     agg.current_total_cost,
-                    agg.current_total_value - COALESCE(prev.total_value, 0),
+                    CASE
+                        WHEN COALESCE(prev.total_value, 0) > 0 THEN agg.current_total_value - prev.total_value
+                        ELSE agg.current_total_value - agg.current_total_cost
+                    END,
                     CASE
                         WHEN COALESCE(prev.total_value, 0) > 0 THEN
                             ROUND(
                                 (((agg.current_total_value - prev.total_value) / prev.total_value) * 100)::numeric, 4
                             )
-                        ELSE 0
+                        ELSE
+                            CASE
+                                WHEN agg.current_total_cost > 0 THEN
+                                    ROUND(
+                                        (((agg.current_total_value - agg.current_total_cost) / agg.current_total_cost) * 100)::numeric, 4
+                                    )
+                                ELSE 0
+                            END
                     END,
                     NOW()
                 FROM aggregated agg

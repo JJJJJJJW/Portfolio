@@ -82,7 +82,6 @@ public class SecurityConfig {
         // The JWKS endpoint requires the 'apikey' header, so we fetch it manually
         // at startup and construct the decoder from the parsed key set.
         String jwksUri = supabaseUrl.replaceAll("/+$", "") + "/auth/v1/.well-known/jwks.json";
-        log.info("Fetching JWKS from: {}", jwksUri);
 
         try {
             // Fetch JWKS with the required apikey header
