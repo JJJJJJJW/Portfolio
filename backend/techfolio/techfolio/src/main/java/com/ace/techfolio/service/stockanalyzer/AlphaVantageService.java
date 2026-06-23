@@ -86,14 +86,15 @@ public class AlphaVantageService {
                 return fallbackTickers();
             }
 
-            // Check for API error messages (e.g., rate limit exceeded, invalid key)
-            if (response.containsKey("Note") || response.containsKey("Information")) {
-                String msg = response.getOrDefault("Note",
-                        response.getOrDefault("Information", "Unknown")).toString();
-                log.warn("Alpha Vantage API message: {}", msg);
-                return fallbackTickers();
+            // Log any informational messages from Alpha Vantage (rate limit warnings, plan info)
+            if (response.containsKey("Information")) {
+                log.info("Alpha Vantage info: {}", response.get("Information"));
+            }
+            if (response.containsKey("Note")) {
+                log.info("Alpha Vantage note: {}", response.get("Note"));
             }
 
+            // Try to extract data first — Alpha Vantage may include Info/Note alongside valid data
             List<String> tickers = new ArrayList<>();
 
             tickers.addAll(extractTickers(response, "top_gainers"));
@@ -103,15 +104,20 @@ public class AlphaVantageService {
             // Deduplicate
             List<String> deduplicated = tickers.stream().distinct().toList();
 
-            log.info("Alpha Vantage returned {} unique filtered tickers from TOP_GAINERS_LOSERS",
-                    deduplicated.size());
-
-            if (deduplicated.isEmpty()) {
-                log.warn("All Alpha Vantage tickers filtered out. Using fallback list.");
-                return fallbackTickers();
+            if (!deduplicated.isEmpty()) {
+                log.info("Alpha Vantage returned {} unique filtered tickers from TOP_GAINERS_LOSERS",
+                        deduplicated.size());
+                return deduplicated;
             }
 
-            return deduplicated;
+            // No usable data — check if this is due to an API-level error
+            if (response.containsKey("Information") || response.containsKey("Note")) {
+                log.warn("Alpha Vantage returned no data. API message present — likely a plan restriction or rate limit.");
+            } else {
+                log.warn("Alpha Vantage returned empty data with no error message.");
+            }
+
+            return fallbackTickers();
 
         } catch (Exception e) {
             log.error("Failed to fetch top movers from Alpha Vantage: {}", e.getMessage());

@@ -80,9 +80,15 @@ public class PolygonService {
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.getForObject(url, Map.class);
 
-            if (response == null || !"OK".equals(response.get("status"))) {
-                log.warn("Polygon returned non-OK for {}: {}", symbol,
-                        response != null ? response.get("status") : "null");
+            if (response == null) {
+                log.warn("Polygon returned null response for {}", symbol);
+                return Collections.emptyList();
+            }
+
+            String status = response.get("status") != null ? response.get("status").toString() : "null";
+            // Polygon basic plan returns "DELAYED" instead of "OK" for aggregates
+            if (!"OK".equals(status) && !"DELAYED".equals(status)) {
+                log.warn("Polygon returned non-OK/DELAYED for {}: {}", symbol, status);
                 return Collections.emptyList();
             }
 

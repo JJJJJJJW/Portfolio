@@ -323,7 +323,8 @@ const PLCalendar: React.FC = () => {
       
       // 2. Parse date in UTC
       let normalized = cleanTs.replace(" ", "T");
-      if (!normalized.endsWith("Z") && !normalized.includes("+") && !normalized.includes("-")) {
+      const timePart = normalized.split("T")[1] || "";
+      if (!normalized.endsWith("Z") && !timePart.includes("+") && !timePart.includes("-")) {
         normalized = normalized + "Z";
       }
       const date = new Date(normalized);
