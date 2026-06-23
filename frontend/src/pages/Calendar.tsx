@@ -321,8 +321,11 @@ const PLCalendar: React.FC = () => {
       // 1. Remove milliseconds/microseconds if present
       const cleanTs = ts.split(".")[0];
       
-      // 2. Parse date
-      const normalized = cleanTs.replace(" ", "T");
+      // 2. Parse date in UTC
+      let normalized = cleanTs.replace(" ", "T");
+      if (!normalized.endsWith("Z") && !normalized.includes("+") && !normalized.includes("-")) {
+        normalized = normalized + "Z";
+      }
       const date = new Date(normalized);
       
       if (!isNaN(date.getTime())) {

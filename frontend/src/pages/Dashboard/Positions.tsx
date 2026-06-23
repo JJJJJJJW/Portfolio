@@ -347,8 +347,8 @@ export default function Positions() {
             <button
               onClick={() => setActiveTab("positions")}
               className={`px-6 py-3 text-sm font-semibold transition-all relative ${activeTab === "positions"
-                  ? "text-brand-500"
-                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                ? "text-brand-500"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 }`}
             >
               Positions
@@ -359,8 +359,8 @@ export default function Positions() {
             <button
               onClick={() => setActiveTab("transactions")}
               className={`px-6 py-3 text-sm font-semibold transition-all relative ${activeTab === "transactions"
-                  ? "text-brand-500"
-                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                ? "text-brand-500"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 }`}
             >
               Transactions
@@ -401,27 +401,25 @@ export default function Positions() {
                   <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">Current Portfolio</h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Click on any asset to view performance details and transaction history.</p>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
                   {/* Currency Toggle */}
                   <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-800 p-0.5 bg-gray-50 dark:bg-gray-950">
                     <button
                       onClick={() => setSelectedCurrency("USD")}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-300 ${
-                        selectedCurrency === "USD"
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-300 ${selectedCurrency === "USD"
                           ? "bg-brand-500 text-white shadow-sm"
                           : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                      }`}
+                        }`}
                     >
                       USD Display
                     </button>
                     <button
                       onClick={() => setSelectedCurrency("MYR")}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-300 ${
-                        selectedCurrency === "MYR"
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-300 ${selectedCurrency === "MYR"
                           ? "bg-brand-500 text-white shadow-sm"
                           : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                      }`}
+                        }`}
                     >
                       MYR Display
                     </button>
@@ -526,9 +524,8 @@ export default function Positions() {
                               <tr
                                 key={pos.id}
                                 onClick={() => setSelectedPosition(pos)}
-                                className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer ${
-                                  idx === usdPositions.length - 1 ? "border-b-0" : ""
-                                }`}
+                                className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer ${idx === usdPositions.length - 1 ? "border-b-0" : ""
+                                  }`}
                               >
                                 <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">
                                   <div className="flex flex-col">
@@ -593,9 +590,8 @@ export default function Positions() {
                               <tr
                                 key={pos.id}
                                 onClick={() => setSelectedPosition(pos)}
-                                className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer ${
-                                  idx === rmPositions.length - 1 ? "border-b-0" : ""
-                                }`}
+                                className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer ${idx === rmPositions.length - 1 ? "border-b-0" : ""
+                                  }`}
                               >
                                 <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">
                                   <div className="flex flex-col">
@@ -608,7 +604,7 @@ export default function Positions() {
                                   </div>
                                 </td>
                                 <td className="px-4 py-4 text-right">{pos.quantity.toFixed(2)}</td>
-                                <td className="px-4 py-4 text-right">RM {pos.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>        
+                                <td className="px-4 py-4 text-right">RM {pos.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                 <td className="px-4 py-4 text-right">RM {pos.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                 <td className="px-4 py-4 text-right">RM {(pos.quantity * pos.avgPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                 <td className="px-4 py-4 text-right font-medium text-gray-900 dark:text-white">
@@ -656,9 +652,8 @@ export default function Positions() {
                       {transactions.map((tx, idx) => (
                         <tr
                           key={tx.id}
-                          className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
-                            idx === transactions.length - 1 ? "border-b-0" : ""
-                          }`}
+                          className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${idx === transactions.length - 1 ? "border-b-0" : ""
+                            }`}
                         >
                           <td className="px-4 py-4">{tx.date}</td>
                           <td className="px-4 py-4">
@@ -728,11 +723,11 @@ export default function Positions() {
 
       {/* Position Details Modal */}
       {selectedPosition && (
-        <div 
+        <div
           className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => setSelectedPosition(null)}
         >
-          <div 
+          <div
             className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
@@ -753,7 +748,7 @@ export default function Positions() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                
+
                 <button
                   onClick={() => setSelectedPosition(null)}
                   className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1"
@@ -860,21 +855,21 @@ export default function Positions() {
 
               {/* Transactions Specific to Asset */}
               <div>
-              <div className="flex justify-between mb-3">
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-                  Transaction History for {selectedPosition.symbol}
-                </h4>
-                <button
-                  type="button"
-                  onClick={() => handleSellFromDetails(selectedPosition)}
-                  className="px-4 py-2 bg-red-500 hover:bg-red-400 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 shadow-md shadow-red-500/10 active:scale-[0.98]"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Sell Asset
-                </button>
-              </div>
+                <div className="flex justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                    Transaction History for {selectedPosition.symbol}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => handleSellFromDetails(selectedPosition)}
+                    className="px-4 py-2 bg-red-500 hover:bg-red-400 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 shadow-md shadow-red-500/10 active:scale-[0.98]"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Sell Asset
+                  </button>
+                </div>
 
                 <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-800">
                   <table className="w-full text-left text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
@@ -939,11 +934,11 @@ export default function Positions() {
 
       {/* Transaction Modal */}
       {isModalOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => setIsModalOpen(false)}
         >
-          <div 
+          <div
             className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
@@ -973,8 +968,8 @@ export default function Positions() {
                     type="button"
                     onClick={() => setTransactionType("buy")}
                     className={`px-4 py-2 border-2 rounded-lg font-medium transition-colors ${transactionType === "buy"
-                        ? "border-brand-500 bg-brand-500/10 text-brand-500"
-                        : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      ? "border-brand-500 bg-brand-500/10 text-brand-500"
+                      : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                       }`}
                   >
                     Buy
@@ -983,8 +978,8 @@ export default function Positions() {
                     type="button"
                     onClick={() => setTransactionType("sell")}
                     className={`px-4 py-2 border-2 rounded-lg font-medium transition-colors ${transactionType === "sell"
-                        ? "border-orange-500 bg-orange-500/10 text-orange-500"
-                        : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      ? "border-orange-500 bg-orange-500/10 text-orange-500"
+                      : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                       }`}
                   >
                     Sell
@@ -1014,11 +1009,10 @@ export default function Positions() {
                         setFormCurrency("USD");
                         setIsManualCurrency(true);
                       }}
-                      className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all duration-300 ${
-                        formCurrency === "USD"
+                      className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all duration-300 ${formCurrency === "USD"
                           ? "bg-brand-500 text-white shadow-sm"
                           : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                      }`}
+                        }`}
                     >
                       USD
                     </button>
@@ -1028,11 +1022,10 @@ export default function Positions() {
                         setFormCurrency("MYR");
                         setIsManualCurrency(true);
                       }}
-                      className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all duration-300 ${
-                        formCurrency === "MYR"
+                      className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all duration-300 ${formCurrency === "MYR"
                           ? "bg-brand-500 text-white shadow-sm"
                           : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                      }`}
+                        }`}
                     >
                       MYR
                     </button>
