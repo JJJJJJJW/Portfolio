@@ -674,6 +674,11 @@ const PLCalendar: React.FC = () => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Daily P/L</h3>
                 <span className="text-xs text-gray-500 dark:text-gray-400 block">{selectedDay.date}</span>
+                {selectedDay.createdAt && (
+                  <span className="text-[11px] text-gray-400 dark:text-gray-500 block mt-0.5">
+                    Last updated: {formatTimestamp(selectedDay.createdAt)}
+                  </span>
+                )}
               </div>
               <button
                 onClick={() => setSelectedDay(null)}
