@@ -20,6 +20,7 @@ import { ScrollToTop } from "./components/common/ScrollToTop";
 import Finance from "./pages/Dashboard/Finance";
 import Positions from "./pages/Dashboard/Positions";
 import Advisor from "./pages/Advisor/Advisor";
+import AboutOwner from "./pages/AboutOwner";
 
 export default function App() {
   return (
@@ -27,10 +28,11 @@ export default function App() {
       <Router>
         <ScrollToTop />
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<Navigate to="/about" replace />} />
 
           {/* Dashboard Layout */}
           <Route element={<AppLayout />}>
+            <Route path="/about" element={<AboutOwner />} />
             <Route path="/dashboard" element={<Finance />} />
             <Route path="/positions" element={<Positions />} />
             <Route path="/advisor" element={<Advisor />} />

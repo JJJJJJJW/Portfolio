@@ -8,6 +8,7 @@ interface PLEntry {
   pct: number;
   realizedPL?: number;
   unrealizedPL?: number;
+  createdAt?: string;
 }
 
 // --- Mock Data Generator ---
@@ -59,7 +60,7 @@ const PLCalendar: React.FC = () => {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [isVisible, setIsVisible] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<{ date: string; pl: number; pct: number; realizedPL?: number; unrealizedPL?: number } | null>(null);
+  const [selectedDay, setSelectedDay] = useState<{ date: string; pl: number; pct: number; realizedPL?: number; unrealizedPL?: number; createdAt?: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // --- Daily Snapshots State & Fetching for Authenticated Users ---
@@ -83,7 +84,7 @@ const PLCalendar: React.FC = () => {
           },
         });
         if (res.ok) {
-          const data: { date: string; pl: number; pct: number; realizedPL?: number; unrealizedPL?: number }[] = await res.json();
+          const data: { date: string; pl: number; pct: number; realizedPL?: number; unrealizedPL?: number; createdAt?: string }[] = await res.json();
           const mapped: Record<string, PLEntry> = {};
           data.forEach(item => {
             const dateStr = item.date.substring(0, 10);
@@ -92,6 +93,7 @@ const PLCalendar: React.FC = () => {
               pct: item.pct,
               realizedPL: item.realizedPL,
               unrealizedPL: item.unrealizedPL,
+              createdAt: item.createdAt,
             };
           });
           setSnapshots(mapped);
@@ -314,6 +316,33 @@ const PLCalendar: React.FC = () => {
     return `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
   };
 
+  const formatTimestamp = (ts: string) => {
+    try {
+      // 1. Remove milliseconds/microseconds if present
+      const cleanTs = ts.split(".")[0];
+      
+      // 2. Parse date
+      const normalized = cleanTs.replace(" ", "T");
+      const date = new Date(normalized);
+      
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleString(undefined, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        });
+      }
+      
+      // Fallback: strip seconds from "YYYY-MM-DD HH:mm:ss"
+      const match = cleanTs.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
+      if (match) {
+        return `${match[1]} ${match[2]}`;
+      }
+      return cleanTs;
+    } catch {
+      return ts;
+    }
+  };
+
   const getIntensityClass = (pl: number) => {
     const abs = Math.abs(pl);
     if (abs < 0.01) {
@@ -503,7 +532,7 @@ const PLCalendar: React.FC = () => {
                       return (
                         <button
                           key={idx}
-                          onClick={() => hasData && cell.isCurrentMonth ? setSelectedDay({ date: cell.dateKey, pl: entry.pl, pct: entry.pct, realizedPL: entry.realizedPL, unrealizedPL: entry.unrealizedPL }) : null}
+                          onClick={() => hasData && cell.isCurrentMonth ? setSelectedDay({ date: cell.dateKey, pl: entry.pl, pct: entry.pct, realizedPL: entry.realizedPL, unrealizedPL: entry.unrealizedPL, createdAt: entry.createdAt }) : null}
                           className={`
                             relative py-4 rounded-lg flex flex-col items-center justify-center gap-0.5 transition-all text-center
                             ${!cell.isCurrentMonth ? "opacity-30" : ""}
@@ -640,7 +669,12 @@ const PLCalendar: React.FC = () => {
             <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-gray-800">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Daily P/L</h3>
-                <span className="text-xs text-gray-500 dark:text-gray-400">{selectedDay.date}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 block">{selectedDay.date}</span>
+                {selectedDay.createdAt && (
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 block mt-0.5">
+                    Recorded at: {formatTimestamp(selectedDay.createdAt)}
+                  </span>
+                )}
               </div>
               <button
                 onClick={() => setSelectedDay(null)}

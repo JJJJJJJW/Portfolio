@@ -15,6 +15,7 @@ public class StockAnalyzerProperties {
     private Security security = new Security();
     private OpenAI openai = new OpenAI();
     private Polygon polygon = new Polygon();
+    private AlphaVantage alphaVantage = new AlphaVantage();
     private Fred fred = new Fred();
     private Finnhub finnhub = new Finnhub();
     private Screening screening = new Screening();
@@ -50,6 +51,16 @@ public class StockAnalyzerProperties {
     public static class Polygon {
         private String apiKey;
         private String baseUrl = "https://api.polygon.io";
+
+        public String getApiKey() { return apiKey; }
+        public void setApiKey(String apiKey) { this.apiKey = apiKey; }
+        public String getBaseUrl() { return baseUrl; }
+        public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
+    }
+
+    public static class AlphaVantage {
+        private String apiKey;
+        private String baseUrl = "https://www.alphavantage.co";
 
         public String getApiKey() { return apiKey; }
         public void setApiKey(String apiKey) { this.apiKey = apiKey; }
@@ -112,6 +123,9 @@ public class StockAnalyzerProperties {
 
     public Polygon getPolygon() { return polygon; }
     public void setPolygon(Polygon polygon) { this.polygon = polygon; }
+
+    public AlphaVantage getAlphaVantage() { return alphaVantage; }
+    public void setAlphaVantage(AlphaVantage alphaVantage) { this.alphaVantage = alphaVantage; }
 
     public Fred getFred() { return fred; }
     public void setFred(Fred fred) { this.fred = fred; }

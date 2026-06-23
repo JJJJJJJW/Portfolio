@@ -614,7 +614,7 @@ public class DashboardService {
         Map<LocalDate, BigDecimal> realizedPLByDate = calculateRealizedPLByDate(transactions, baseCurrency, usdToMyrRate);
 
         String sql = """
-                SELECT snapshot_date::text, daily_pl, daily_pl_pct, total_value, total_cost
+                SELECT snapshot_date::text, daily_pl, daily_pl_pct, total_value, total_cost, created_at::text
                 FROM portfolio_daily_snapshots
                 WHERE user_id = ?
                 ORDER BY snapshot_date ASC
@@ -639,6 +639,7 @@ public class DashboardService {
             BigDecimal dailyPLPctRaw = (BigDecimal) row.get("daily_pl_pct");
             BigDecimal totalValueRaw = (BigDecimal) row.get("total_value");
             BigDecimal totalCostRaw = (BigDecimal) row.get("total_cost");
+            String createdAtStr = (String) row.get("created_at");
 
             double dailyPL = dailyPLRaw != null ? dailyPLRaw.doubleValue() : 0.0;
             double dailyPLPct = dailyPLPctRaw != null ? dailyPLPctRaw.doubleValue() : 0.0;
@@ -660,7 +661,8 @@ public class DashboardService {
                     safeRound(dailyPL, 2),
                     safeRound(dailyPLPct, 4),
                     safeRound(realizedPL, 2),
-                    safeRound(unrealizedPL, 2)
+                    safeRound(unrealizedPL, 2),
+                    createdAtStr
             ));
         }
 

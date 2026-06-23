@@ -5,5 +5,6 @@ public record DailyPLResponse(
     double pl,
     double pct,
     double realizedPL,
-    double unrealizedPL
+    double unrealizedPL,
+    String createdAt
 ) {}

@@ -6,7 +6,8 @@ import {
   GridIcon,
   HorizontaLDots,
   SparklesIcon,
-  UserCircleIcon
+  UserCircleIcon,
+  UserIcon
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 type NavItem = {
@@ -16,6 +17,11 @@ type NavItem = {
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 const navItems: NavItem[] = [
+  {
+    icon: <UserIcon />,
+    name: "System Owner",
+    path: "/about",
+  },
   {
     icon: <GridIcon />,
     name: "Investment",

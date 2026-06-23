@@ -16,25 +16,25 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Client for the Polygon.io REST API (free tier).
+ * Client for the Polygon.io REST API (free tier) — OHLCV daily bars only.
  *
  * <p>Rate-limited to 5 calls per minute using Bucket4j. The bucket
  * blocks the calling thread when exhausted — safe because the pipeline
  * runs on a dedicated {@code @Async} thread pool, never on the HTTP
  * request thread.</p>
  *
- * <p>Endpoints used:</p>
+ * <p>Endpoint used:</p>
  * <ul>
- *   <li>{@code /v2/snapshot/locale/us/markets/stocks/gainers} — top gainers</li>
- *   <li>{@code /v2/snapshot/locale/us/markets/stocks/losers} — top losers</li>
  *   <li>{@code /v2/aggs/ticker/{symbol}/range/1/day/{from}/{to}} — OHLCV bars</li>
  * </ul>
+ *
+ * <p>Note: Top movers discovery has been moved to {@link AlphaVantageService},
+ * which uses Alpha Vantage's free {@code TOP_GAINERS_LOSERS} endpoint.</p>
  */
 @Service
 public class PolygonService {
@@ -54,29 +54,6 @@ public class PolygonService {
         this.rateLimiter = Bucket.builder()
                 .addLimit(Bandwidth.simple(5, Duration.ofMinutes(1)))
                 .build();
-    }
-
-    /**
-     * Fetches top movers (gainers + losers) from Polygon snapshots.
-     * Returns a deduplicated list of ticker symbols.
-     */
-    public List<String> fetchTopMovers() {
-        List<String> tickers = new ArrayList<>();
-
-        try {
-            consumeToken();
-            List<String> gainers = fetchSnapshotTickers("/v2/snapshot/locale/us/markets/stocks/gainers");
-            tickers.addAll(gainers);
-
-            consumeToken();
-            List<String> losers = fetchSnapshotTickers("/v2/snapshot/locale/us/markets/stocks/losers");
-            tickers.addAll(losers);
-        } catch (Exception e) {
-            log.error("Failed to fetch top movers from Polygon: {}", e.getMessage());
-        }
-
-        // Deduplicate
-        return tickers.stream().distinct().toList();
     }
 
     /**
@@ -135,31 +112,6 @@ public class PolygonService {
     // =========================================================================
     // Helpers
     // =========================================================================
-
-    @SuppressWarnings("unchecked")
-    private List<String> fetchSnapshotTickers(String path) {
-        String url = String.format("%s%s?apiKey=%s",
-                props.getPolygon().getBaseUrl(), path, props.getPolygon().getApiKey());
-
-        try {
-            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
-            if (response == null || response.get("tickers") == null) {
-                return Collections.emptyList();
-            }
-
-            List<Map<String, Object>> tickerList = (List<Map<String, Object>>) response.get("tickers");
-            return tickerList.stream()
-                    .map(t -> {
-                        Object ticker = t.get("ticker");
-                        return ticker != null ? ticker.toString() : null;
-                    })
-                    .filter(t -> t != null && !t.isBlank())
-                    .toList();
-        } catch (Exception e) {
-            log.error("Failed to fetch snapshot from {}: {}", path, e.getMessage());
-            return Collections.emptyList();
-        }
-    }
 
     /**
      * Acquires a token from the rate limiter, blocking the thread if necessary.
