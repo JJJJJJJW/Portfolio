@@ -635,6 +635,10 @@ public class DashboardService {
                 localDate = LocalDate.parse(dateStr);
             }
 
+            // Midnight offset: since snapshots run at 12am+ on date X, they logically represent X-1
+            LocalDate logicalDate = localDate.minusDays(1);
+            String logicalDateStr = logicalDate.toString();
+
             BigDecimal dailyPLRaw = (BigDecimal) row.get("daily_pl");
             BigDecimal dailyPLPctRaw = (BigDecimal) row.get("daily_pl_pct");
             BigDecimal totalValueRaw = (BigDecimal) row.get("total_value");
@@ -652,12 +656,12 @@ public class DashboardService {
                 dailyPLPct = totalCost > 0 ? (dailyPL / totalCost) * 100.0 : 0.0;
             }
 
-            BigDecimal realizedPLVal = realizedPLByDate.getOrDefault(localDate, BigDecimal.ZERO);
+            BigDecimal realizedPLVal = realizedPLByDate.getOrDefault(logicalDate, BigDecimal.ZERO);
             double realizedPL = realizedPLVal.doubleValue();
             double unrealizedPL = dailyPL - realizedPL;
 
             response.add(new DailyPLResponse(
-                    dateStr,
+                    logicalDateStr,
                     safeRound(dailyPL, 2),
                     safeRound(dailyPLPct, 4),
                     safeRound(realizedPL, 2),

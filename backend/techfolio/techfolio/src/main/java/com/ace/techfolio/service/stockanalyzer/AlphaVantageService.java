@@ -51,6 +51,12 @@ public class AlphaVantageService {
     private final RestTemplate restTemplate;
     private final Bucket rateLimiter;
 
+    // Cache fields to prevent rate limit issues (25 requests/day standard limit)
+    private final Object cacheLock = new Object();
+    private List<String> cachedTickers = null;
+    private java.time.LocalDateTime cacheExpiry = null;
+    private static final Duration CACHE_DURATION = Duration.ofHours(12);
+
     public AlphaVantageService(StockAnalyzerProperties props) {
         this.props = props;
         this.restTemplate = new RestTemplate();
@@ -71,6 +77,13 @@ public class AlphaVantageService {
      *         fallback list if the API call fails
      */
     public List<String> fetchTopMovers() {
+        synchronized (cacheLock) {
+            if (cachedTickers != null && cacheExpiry != null && java.time.LocalDateTime.now().isBefore(cacheExpiry)) {
+                log.info("Returning cached Alpha Vantage top movers (expires at {})", cacheExpiry);
+                return cachedTickers;
+            }
+        }
+
         consumeToken();
 
         String url = String.format("%s/query?function=TOP_GAINERS_LOSERS&apikey=%s",
@@ -83,7 +96,11 @@ public class AlphaVantageService {
 
             if (response == null) {
                 log.warn("Alpha Vantage returned null response for TOP_GAINERS_LOSERS");
-                return fallbackTickers();
+                synchronized (cacheLock) {
+                    cachedTickers = fallbackTickers();
+                    cacheExpiry = java.time.LocalDateTime.now().plus(Duration.ofMinutes(10));
+                }
+                return cachedTickers;
             }
 
             // Log any informational messages from Alpha Vantage (rate limit warnings, plan info)
@@ -107,6 +124,10 @@ public class AlphaVantageService {
             if (!deduplicated.isEmpty()) {
                 log.info("Alpha Vantage returned {} unique filtered tickers from TOP_GAINERS_LOSERS",
                         deduplicated.size());
+                synchronized (cacheLock) {
+                    cachedTickers = deduplicated;
+                    cacheExpiry = java.time.LocalDateTime.now().plus(CACHE_DURATION);
+                }
                 return deduplicated;
             }
 
@@ -117,11 +138,19 @@ public class AlphaVantageService {
                 log.warn("Alpha Vantage returned empty data with no error message.");
             }
 
-            return fallbackTickers();
+            synchronized (cacheLock) {
+                cachedTickers = fallbackTickers();
+                cacheExpiry = java.time.LocalDateTime.now().plus(Duration.ofMinutes(10));
+            }
+            return cachedTickers;
 
         } catch (Exception e) {
             log.error("Failed to fetch top movers from Alpha Vantage: {}", e.getMessage());
-            return fallbackTickers();
+            synchronized (cacheLock) {
+                cachedTickers = fallbackTickers();
+                cacheExpiry = java.time.LocalDateTime.now().plus(Duration.ofMinutes(10));
+            }
+            return cachedTickers;
         }
     }
 

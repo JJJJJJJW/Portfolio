@@ -30,7 +30,7 @@ import java.util.Optional;
  *   <li>Fetches/refreshes company fundamentals from Finnhub</li>
  *   <li>Fetches/refreshes macro context from FRED</li>
  *   <li>Fetches recent news from Finnhub</li>
- *   <li>Sends structured prompt to OpenAI GPT-4o-mini</li>
+ *   <li>Sends structured prompt to Gemini</li>
  *   <li>Saves the resulting TradingSignal to the database</li>
  * </ol>
  *
@@ -45,7 +45,6 @@ public class DeepAnalysisService {
     private final PolygonService polygonService;
     private final FinnhubService finnhubService;
     private final FredService fredService;
-    private final OpenAIService openAIService;
     private final GeminiService geminiService;
     private final TechnicalAnalysisService technicalAnalysisService;
     private final StockAnalyzerProperties props;
@@ -57,7 +56,6 @@ public class DeepAnalysisService {
     public DeepAnalysisService(PolygonService polygonService,
                                 FinnhubService finnhubService,
                                 FredService fredService,
-                                OpenAIService openAIService,
                                 GeminiService geminiService,
                                 TechnicalAnalysisService technicalAnalysisService,
                                 StockAnalyzerProperties props,
@@ -68,7 +66,6 @@ public class DeepAnalysisService {
         this.polygonService = polygonService;
         this.finnhubService = finnhubService;
         this.fredService = fredService;
-        this.openAIService = openAIService;
         this.geminiService = geminiService;
         this.technicalAnalysisService = technicalAnalysisService;
         this.props = props;
@@ -129,14 +126,8 @@ public class DeepAnalysisService {
         List<String> news = finnhubService.fetchCompanyNews(symbol, 7);
 
         // 7. Call LLM for analysis (with risk appetite from user profile)
-        TradingSignal signal;
-        if ("gemini".equalsIgnoreCase(props.getProvider())) {
-            signal = geminiService.analyzeStock(
-                    symbol, snapshot, fundamentals, macro, news, riskAppetite);
-        } else {
-            signal = openAIService.analyzeStock(
-                    symbol, snapshot, fundamentals, macro, news, riskAppetite);
-        }
+        TradingSignal signal = geminiService.analyzeStock(
+                symbol, snapshot, fundamentals, macro, news, riskAppetite);
 
         // 8. Save signal to DB
         if (signal != null) {
