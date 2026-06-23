@@ -82,8 +82,8 @@ public class ScreeningService {
             }
 
             try {
-                // Fetch enough bars for 200-SMA calculation (~280 calendar days ≈ 200 trading days)
-                List<PolygonService.OhlcvBar> bars = polygonService.fetchDailyBars(ticker, 280);
+                // Fetch enough bars for 200-SMA calculation (~350 calendar days ≈ 240 trading days)
+                List<PolygonService.OhlcvBar> bars = polygonService.fetchDailyBars(ticker, 350);
 
                 if (bars.isEmpty()) {
                     log.debug("No bar data for {} — skipping", ticker);

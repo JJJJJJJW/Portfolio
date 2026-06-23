@@ -8,6 +8,7 @@ import com.ace.techfolio.repository.stockanalyzer.FundamentalDataRepository;
 import com.ace.techfolio.repository.stockanalyzer.MacroSnapshotRepository;
 import com.ace.techfolio.repository.stockanalyzer.StockSnapshotRepository;
 import com.ace.techfolio.repository.stockanalyzer.TradingSignalRepository;
+import com.ace.techfolio.config.StockAnalyzerProperties;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +46,9 @@ public class DeepAnalysisService {
     private final FinnhubService finnhubService;
     private final FredService fredService;
     private final OpenAIService openAIService;
+    private final GeminiService geminiService;
     private final TechnicalAnalysisService technicalAnalysisService;
+    private final StockAnalyzerProperties props;
     private final StockSnapshotRepository snapshotRepo;
     private final FundamentalDataRepository fundamentalRepo;
     private final MacroSnapshotRepository macroRepo;
@@ -55,7 +58,9 @@ public class DeepAnalysisService {
                                 FinnhubService finnhubService,
                                 FredService fredService,
                                 OpenAIService openAIService,
+                                GeminiService geminiService,
                                 TechnicalAnalysisService technicalAnalysisService,
+                                StockAnalyzerProperties props,
                                 StockSnapshotRepository snapshotRepo,
                                 FundamentalDataRepository fundamentalRepo,
                                 MacroSnapshotRepository macroRepo,
@@ -64,7 +69,9 @@ public class DeepAnalysisService {
         this.finnhubService = finnhubService;
         this.fredService = fredService;
         this.openAIService = openAIService;
+        this.geminiService = geminiService;
         this.technicalAnalysisService = technicalAnalysisService;
+        this.props = props;
         this.snapshotRepo = snapshotRepo;
         this.fundamentalRepo = fundamentalRepo;
         this.macroRepo = macroRepo;
@@ -91,9 +98,8 @@ public class DeepAnalysisService {
             return cached.get(0);
         }
 
-        // 2. Fetch 60 days OHLCV from Polygon (rate-limited)
-        List<PolygonService.OhlcvBar> bars = polygonService.fetchDailyBars(symbol, 90);
-        // Fetch extended data for better indicator accuracy
+        // 2. Fetch 350 calendar days OHLCV from Polygon to calculate indicators (including SMA200)
+        List<PolygonService.OhlcvBar> bars = polygonService.fetchDailyBars(symbol, 350);
 
         // 3. Calculate technical indicators
         StockSnapshot snapshot = technicalAnalysisService.calculateIndicators(symbol, bars);
@@ -122,9 +128,15 @@ public class DeepAnalysisService {
         // 6. Fetch recent news from Finnhub
         List<String> news = finnhubService.fetchCompanyNews(symbol, 7);
 
-        // 7. Call OpenAI for analysis (with risk appetite from user profile)
-        TradingSignal signal = openAIService.analyzeStock(
-                symbol, snapshot, fundamentals, macro, news, riskAppetite);
+        // 7. Call LLM for analysis (with risk appetite from user profile)
+        TradingSignal signal;
+        if ("gemini".equalsIgnoreCase(props.getProvider())) {
+            signal = geminiService.analyzeStock(
+                    symbol, snapshot, fundamentals, macro, news, riskAppetite);
+        } else {
+            signal = openAIService.analyzeStock(
+                    symbol, snapshot, fundamentals, macro, news, riskAppetite);
+        }
 
         // 8. Save signal to DB
         if (signal != null) {

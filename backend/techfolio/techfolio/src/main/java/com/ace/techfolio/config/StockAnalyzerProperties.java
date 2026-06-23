@@ -13,7 +13,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class StockAnalyzerProperties {
 
     private Security security = new Security();
+    private String provider = "openai";
     private OpenAI openai = new OpenAI();
+    private Gemini gemini = new Gemini();
     private Polygon polygon = new Polygon();
     private AlphaVantage alphaVantage = new AlphaVantage();
     private Fred fred = new Fred();
@@ -37,6 +39,22 @@ public class StockAnalyzerProperties {
         private String model = "gpt-4o-mini";
         private double temperature = 0.2;
         private int maxTokens = 500;
+
+        public String getApiKey() { return apiKey; }
+        public void setApiKey(String apiKey) { this.apiKey = apiKey; }
+        public String getModel() { return model; }
+        public void setModel(String model) { this.model = model; }
+        public double getTemperature() { return temperature; }
+        public void setTemperature(double temperature) { this.temperature = temperature; }
+        public int getMaxTokens() { return maxTokens; }
+        public void setMaxTokens(int maxTokens) { this.maxTokens = maxTokens; }
+    }
+
+    public static class Gemini {
+        private String apiKey;
+        private String model = "gemini-3.5-flash";
+        private double temperature = 0.2;
+        private int maxTokens = 1000;
 
         public String getApiKey() { return apiKey; }
         public void setApiKey(String apiKey) { this.apiKey = apiKey; }
@@ -118,8 +136,14 @@ public class StockAnalyzerProperties {
     public Security getSecurity() { return security; }
     public void setSecurity(Security security) { this.security = security; }
 
+    public String getProvider() { return provider; }
+    public void setProvider(String provider) { this.provider = provider; }
+
     public OpenAI getOpenai() { return openai; }
     public void setOpenai(OpenAI openai) { this.openai = openai; }
+
+    public Gemini getGemini() { return gemini; }
+    public void setGemini(Gemini gemini) { this.gemini = gemini; }
 
     public Polygon getPolygon() { return polygon; }
     public void setPolygon(Polygon polygon) { this.polygon = polygon; }

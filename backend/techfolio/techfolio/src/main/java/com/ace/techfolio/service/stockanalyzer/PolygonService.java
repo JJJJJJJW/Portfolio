@@ -50,9 +50,9 @@ public class PolygonService {
         this.props = props;
         this.restTemplate = new RestTemplate();
 
-        // Polygon free tier: 5 API calls per minute
+        // Spaced out rate limiting (1 call per 12 seconds) to avoid sliding 60s window 429 errors
         this.rateLimiter = Bucket.builder()
-                .addLimit(Bandwidth.simple(5, Duration.ofMinutes(1)))
+                .addLimit(Bandwidth.simple(1, Duration.ofSeconds(12)))
                 .build();
     }
 
