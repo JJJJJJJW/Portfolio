@@ -61,23 +61,40 @@ public class GeminiService {
         String systemPrompt = buildSystemPrompt(riskAppetite);
         String userPrompt = buildUserPrompt(symbol, snapshot, fundamentals, macro, newsHeadlines);
 
-        for (int attempt = 1; attempt <= 2; attempt++) {
-            try {
-                String response = callGemini(systemPrompt, userPrompt);
-                return parseResponse(response, symbol);
-            } catch (JsonProcessingException e) {
-                log.warn("Attempt {}/2: Failed to parse Gemini JSON for {}: {}", attempt, symbol, e.getMessage());
-                if (attempt == 2) {
-                    log.error("Both attempts failed for {}. Returning default HOLD signal.", symbol);
-                    return buildDefaultHoldSignal(symbol);
+        String primaryModel = props.getGemini().getModel();
+        try {
+            return analyzeWithModel(primaryModel, symbol, systemPrompt, userPrompt);
+        } catch (Exception e) {
+            String fallbackModel = props.getGemini().getFallbackModel();
+            if (fallbackModel != null && !fallbackModel.isBlank() && !fallbackModel.equals(primaryModel)) {
+                log.warn("Primary model ({}) failed for {}: {}. Attempting fallback model ({})",
+                        primaryModel, symbol, e.getMessage(), fallbackModel);
+                try {
+                    return analyzeWithModel(fallbackModel, symbol, systemPrompt, userPrompt);
+                } catch (Exception ex) {
+                    log.error("Fallback model ({}) also failed for {}: {}", fallbackModel, symbol, ex.getMessage());
                 }
-            } catch (Exception e) {
-                log.error("Gemini API call failed for {}: {}", symbol, e.getMessage());
-                return buildDefaultHoldSignal(symbol);
+            } else {
+                log.error("Primary model ({}) failed for {} and no valid fallback model is configured.", primaryModel, symbol);
             }
         }
 
         return buildDefaultHoldSignal(symbol);
+    }
+
+    private TradingSignal analyzeWithModel(String model, String symbol, String systemPrompt, String userPrompt) throws Exception {
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            try {
+                String response = callGemini(model, systemPrompt, userPrompt);
+                return parseResponse(response, symbol);
+            } catch (JsonProcessingException e) {
+                log.warn("Model {} - Attempt {}/2: Failed to parse Gemini JSON for {}: {}", model, attempt, symbol, e.getMessage());
+                if (attempt == 2) {
+                    throw e;
+                }
+            }
+        }
+        throw new RuntimeException("Unexpected exit from model analysis loop");
     }
 
     private String buildSystemPrompt(String riskAppetite) {
@@ -181,8 +198,7 @@ public class GeminiService {
     }
 
     @SuppressWarnings("unchecked")
-    private String callGemini(String systemPrompt, String userPrompt) {
-        String model = props.getGemini().getModel();
+    private String callGemini(String model, String systemPrompt, String userPrompt) {
         String apiKey = props.getGemini().getApiKey();
         String url = String.format(GEMINI_API_URL_TEMPLATE, model, apiKey);
 
