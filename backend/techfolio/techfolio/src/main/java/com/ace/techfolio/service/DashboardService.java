@@ -635,8 +635,8 @@ public class DashboardService {
                 localDate = LocalDate.parse(dateStr);
             }
 
-            // Midnight offset: since snapshots run at 12am+ on date X, they logically represent X-1
-            LocalDate logicalDate = localDate.minusDays(1);
+            // Since snapshots are stored with their correct logical date, use it directly
+            LocalDate logicalDate = localDate;
             String logicalDateStr = logicalDate.toString();
 
             BigDecimal dailyPLRaw = (BigDecimal) row.get("daily_pl");

@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,8 +59,12 @@ public class PortfolioSnapshotService {
      */
     @Transactional
     public String executeSnapshot() {
-        LocalDate today = LocalDate.now();
-        log.info("=== EOD Snapshot started for date: {} ===", today);
+        // EOD snapshot represents yesterday if run in the early morning (before 6 AM) local GMT+8 time
+        ZonedDateTime nowGmt8 = ZonedDateTime.now(ZoneId.of("GMT+8"));
+        LocalDate today = nowGmt8.getHour() < 6 
+                ? nowGmt8.toLocalDate().minusDays(1) 
+                : nowGmt8.toLocalDate();
+        log.info("=== EOD Snapshot started for date: {} (current time: {}) ===", today, nowGmt8);
 
         // Step 1: Get all distinct symbols with holdings
         List<String> symbols = assetRepository.findDistinctSymbolsWithPositiveQuantity();
