@@ -12,15 +12,15 @@ import java.util.List;
 /**
  * Stage 1 of the two-stage pipeline: Screening.
  *
- * <p>Runs daily (triggered by cron). Fetches top movers from Alpha Vantage,
- * then applies technical filters using OHLCV data from Polygon to produce
+ * <p>Runs daily (triggered by cron). Fetches top movers from Polygon's Grouped Daily endpoint,
+ * then applies technical filters using historical OHLCV data from Polygon to produce
  * 20-30 candidate tickers for deep analysis.</p>
  *
  * <p>Data sources:</p>
  * <ul>
- *   <li><strong>Alpha Vantage</strong> — {@code TOP_GAINERS_LOSERS} endpoint
- *       for discovering which tickers to screen (free tier).</li>
- *   <li><strong>Polygon.io</strong> — {@code /v2/aggs/ticker/.../range/1/day/...}
+ *   <li><strong>Polygon.io (Grouped Daily)</strong> — {@code /v2/aggs/grouped/locale/us/market/stocks/{date}}
+ *       for discovering top gainers, losers, and active tickers to screen (free tier).</li>
+ *   <li><strong>Polygon.io (Daily Bars)</strong> — {@code /v2/aggs/ticker/.../range/1/day/...}
  *       for daily OHLCV bars used in technical filter calculations (free tier).</li>
  * </ul>
  *
@@ -39,16 +39,13 @@ public class ScreeningService {
 
     private static final Logger log = LoggerFactory.getLogger(ScreeningService.class);
 
-    private final AlphaVantageService alphaVantageService;
     private final PolygonService polygonService;
     private final TechnicalAnalysisService technicalAnalysisService;
     private final StockAnalyzerProperties props;
 
-    public ScreeningService(AlphaVantageService alphaVantageService,
-                             PolygonService polygonService,
+    public ScreeningService(PolygonService polygonService,
                              TechnicalAnalysisService technicalAnalysisService,
                              StockAnalyzerProperties props) {
-        this.alphaVantageService = alphaVantageService;
         this.polygonService = polygonService;
         this.technicalAnalysisService = technicalAnalysisService;
         this.props = props;
@@ -62,12 +59,12 @@ public class ScreeningService {
     public List<String> screenCandidates() {
         log.info("=== Stage 1: Screening started ===");
 
-        // 1. Fetch top movers from Alpha Vantage
-        List<String> topMovers = alphaVantageService.fetchTopMovers();
-        log.info("Fetched {} top movers from Alpha Vantage", topMovers.size());
+        // 1. Fetch top movers from Polygon Grouped Daily
+        List<String> topMovers = polygonService.fetchTopMovers();
+        log.info("Fetched {} top movers from Polygon", topMovers.size());
 
         if (topMovers.isEmpty()) {
-            log.warn("No top movers returned from Alpha Vantage. Screening aborted.");
+            log.warn("No top movers returned from Polygon. Screening aborted.");
             return new ArrayList<>();
         }
 
