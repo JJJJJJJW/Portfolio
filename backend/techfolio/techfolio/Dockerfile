@@ -28,8 +28,8 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
 # Render exposes the PORT env var; Spring Boot reads server.port
-ENV PORT=8080
-EXPOSE 8080
+ENV PORT=10000
+EXPOSE 10000
 
 # JVM flags tuned for Render free tier (512MB RAM)
 #   -Xmx300m        → hard heap cap
