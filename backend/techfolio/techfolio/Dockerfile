@@ -35,10 +35,4 @@ EXPOSE 10000
 #   -Xmx300m        → hard heap cap
 #   -Xss512k        → smaller thread stacks
 #   -XX:+UseSerialGC → low-overhead GC for small heaps
-ENTRYPOINT ["java", \
-  "-Xmx300m", \
-  "-Xss512k", \
-  "-XX:+UseSerialGC", \
-  "-Djava.security.egd=file:/dev/./urandom", \
-  "-jar", "app.jar", \
-  "--server.port=${PORT}"]
+ENTRYPOINT ["sh", "-c", "java -Xmx300m -Xss512k -XX:+UseSerialGC -Djava.security.egd=file:/dev/./urandom -jar app.jar --server.port=${PORT}"]
