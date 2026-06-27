@@ -20,7 +20,9 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.client.RestTemplate;
@@ -77,39 +79,104 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Lazy-initializing JWT decoder that defers the Supabase JWKS fetch
+     * to the first authenticated request instead of blocking at startup.
+     *
+     * <p>This prevents cold-start crashes on Render free tier when the
+     * JWKS endpoint is temporarily unreachable during container spin-up.
+     * Public endpoints (/ping, /health, /cron/**) never trigger this
+     * because they are marked {@code permitAll()}.</p>
+     *
+     * <p>Thread-safe via volatile + double-checked locking. Includes
+     * retry logic (3 attempts with 2s backoff) for network resilience.</p>
+     */
     @Bean
     public JwtDecoder jwtDecoder() {
-        // Supabase issues ES256 (ECDSA) JWTs signed with an asymmetric key pair.
-        // The JWKS endpoint requires the 'apikey' header, so we fetch it manually
-        // at startup and construct the decoder from the parsed key set.
-        String jwksUri = supabaseUrl.replaceAll("/+$", "") + "/auth/v1/.well-known/jwks.json";
+        return new LazyJwtDecoder(supabaseUrl, supabaseAnonKey);
+    }
 
-        try {
-            // Fetch JWKS with the required apikey header
+    /**
+     * JwtDecoder wrapper that lazily fetches JWKS on first decode() call.
+     * This allows Spring context to initialize successfully even if
+     * Supabase is unreachable during cold start.
+     */
+    private static class LazyJwtDecoder implements JwtDecoder {
+
+        private static final Logger log = LoggerFactory.getLogger(LazyJwtDecoder.class);
+        private static final int MAX_RETRIES = 3;
+        private static final long RETRY_DELAY_MS = 2000;
+
+        private final String supabaseUrl;
+        private final String supabaseAnonKey;
+
+        // Volatile for safe double-checked locking
+        private volatile NimbusJwtDecoder delegate;
+
+        LazyJwtDecoder(String supabaseUrl, String supabaseAnonKey) {
+            this.supabaseUrl = supabaseUrl;
+            this.supabaseAnonKey = supabaseAnonKey;
+        }
+
+        @Override
+        public Jwt decode(String token) throws JwtException {
+            if (delegate == null) {
+                synchronized (this) {
+                    if (delegate == null) {
+                        delegate = initializeDecoder();
+                    }
+                }
+            }
+            return delegate.decode(token);
+        }
+
+        private NimbusJwtDecoder initializeDecoder() {
+            String jwksUri = supabaseUrl.replaceAll("/+$", "") + "/auth/v1/.well-known/jwks.json";
+            log.info("Lazily initializing JWT decoder — fetching JWKS from {}", jwksUri);
+
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
             headers.set("apikey", supabaseAnonKey);
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-            ResponseEntity<String> response = restTemplate.exchange(
-                    jwksUri, HttpMethod.GET, entity, String.class);
+            Exception lastException = null;
 
-            // Parse the JWK set from the response
-            JWKSet jwkSet = JWKSet.parse(response.getBody());
-            
-            // Build a JWT processor that uses the fetched keys for ES256 verification
-            ImmutableJWKSet<SecurityContext> jwkSource = new ImmutableJWKSet<>(jwkSet);
-            DefaultJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
-            jwtProcessor.setJWSKeySelector(
-                    new JWSVerificationKeySelector<>(JWSAlgorithm.ES256, jwkSource));
+            for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+                try {
+                    ResponseEntity<String> response = restTemplate.exchange(
+                            jwksUri, HttpMethod.GET, entity, String.class);
 
-            return new NimbusJwtDecoder(jwtProcessor);
+                    JWKSet jwkSet = JWKSet.parse(response.getBody());
 
-        } catch (ParseException e) {
-            throw new RuntimeException("[Techfolio Security] Failed to parse JWKS response", e);
-        } catch (Exception e) {
-            log.error("FATAL: Could not fetch JWKS from {}", jwksUri, e);
-            throw new RuntimeException("Failed to initialize JWT decoder from Supabase JWKS", e);
+                    ImmutableJWKSet<SecurityContext> jwkSource = new ImmutableJWKSet<>(jwkSet);
+                    DefaultJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
+                    jwtProcessor.setJWSKeySelector(
+                            new JWSVerificationKeySelector<>(JWSAlgorithm.ES256, jwkSource));
+
+                    log.info("JWT decoder initialized successfully on attempt {}", attempt);
+                    return new NimbusJwtDecoder(jwtProcessor);
+
+                } catch (ParseException e) {
+                    lastException = e;
+                    log.error("Failed to parse JWKS response on attempt {}/{}", attempt, MAX_RETRIES, e);
+                } catch (Exception e) {
+                    lastException = e;
+                    log.warn("JWKS fetch attempt {}/{} failed: {}", attempt, MAX_RETRIES, e.getMessage());
+                }
+
+                if (attempt < MAX_RETRIES) {
+                    try {
+                        Thread.sleep(RETRY_DELAY_MS);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new JwtException("Interrupted while retrying JWKS fetch", ie);
+                    }
+                }
+            }
+
+            throw new JwtException(
+                    "Failed to fetch JWKS from " + jwksUri + " after " + MAX_RETRIES + " attempts",
+                    lastException);
         }
     }
 
@@ -141,6 +208,7 @@ public class SecurityConfig {
         return source;
     }
 }
+
 
 
 
