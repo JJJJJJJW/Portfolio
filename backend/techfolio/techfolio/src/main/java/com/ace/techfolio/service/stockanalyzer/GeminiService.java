@@ -27,16 +27,17 @@ import java.util.Map;
 /**
  * Gemini API client for stock analysis.
  *
- * <p>Sends structured prompts with technical, fundamental, macro, and
+ * <p>
+ * Sends structured prompts with technical, fundamental, macro, and
  * sentiment data. Parses the JSON response into a {@link TradingSignal}.
- * Retries once on JSON parse failure.</p>
+ * Retries once on JSON parse failure.
+ * </p>
  */
 @Service
 public class GeminiService {
 
     private static final Logger log = LoggerFactory.getLogger(GeminiService.class);
-    private static final String GEMINI_API_URL_TEMPLATE = 
-            "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
+    private static final String GEMINI_API_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
 
     private final StockAnalyzerProperties props;
     private final RestTemplate restTemplate;
@@ -52,11 +53,11 @@ public class GeminiService {
      * Analyzes a stock and returns a trading signal.
      */
     public TradingSignal analyzeStock(String symbol,
-                                       StockSnapshot snapshot,
-                                       FundamentalData fundamentals,
-                                       MacroSnapshot macro,
-                                       List<String> newsHeadlines,
-                                       String riskAppetite) {
+            StockSnapshot snapshot,
+            FundamentalData fundamentals,
+            MacroSnapshot macro,
+            List<String> newsHeadlines,
+            String riskAppetite) {
 
         String systemPrompt = buildSystemPrompt(riskAppetite);
         String userPrompt = buildUserPrompt(symbol, snapshot, fundamentals, macro, newsHeadlines);
@@ -75,20 +76,23 @@ public class GeminiService {
                     log.error("Fallback model ({}) also failed for {}: {}", fallbackModel, symbol, ex.getMessage());
                 }
             } else {
-                log.error("Primary model ({}) failed for {} and no valid fallback model is configured.", primaryModel, symbol);
+                log.error("Primary model ({}) failed for {} and no valid fallback model is configured.", primaryModel,
+                        symbol);
             }
         }
 
         return buildDefaultHoldSignal(symbol);
     }
 
-    private TradingSignal analyzeWithModel(String model, String symbol, String systemPrompt, String userPrompt) throws Exception {
+    private TradingSignal analyzeWithModel(String model, String symbol, String systemPrompt, String userPrompt)
+            throws Exception {
         for (int attempt = 1; attempt <= 2; attempt++) {
             try {
                 String response = callGemini(model, systemPrompt, userPrompt);
                 return parseResponse(response, symbol);
             } catch (JsonProcessingException e) {
-                log.warn("Model {} - Attempt {}/2: Failed to parse Gemini JSON for {}: {}", model, attempt, symbol, e.getMessage());
+                log.warn("Model {} - Attempt {}/2: Failed to parse Gemini JSON for {}: {}", model, attempt, symbol,
+                        e.getMessage());
                 if (attempt == 2) {
                     throw e;
                 }
@@ -105,20 +109,28 @@ public class GeminiService {
 
         if (riskAppetite != null && !riskAppetite.isBlank()) {
             sb.append("IMPORTANT — INVESTOR RISK PROFILE: The investor's risk appetite is \"")
-              .append(riskAppetite)
-              .append("\". Calibrate your signal confidence, entry/exit targets, and recommendations ")
-              .append("accordingly. For conservative investors, be more selective and widen stop-losses. ")
-              .append("For aggressive investors, consider higher-conviction setups with tighter risk management.\n\n");
+                    .append(riskAppetite)
+                    .append("\". Calibrate your signal confidence, entry/exit targets, and recommendations ")
+                    .append("accordingly. For conservative investors, be more selective and widen stop-losses. ")
+                    .append("For aggressive investors, consider higher-conviction setups with tighter risk management.\n\n");
         }
 
         sb.append("Rules:\n");
         sb.append("- Be conservative. Only recommend BUY when 3+ factors align.\n");
-        sb.append("- Always provide specific entry, target, and stop-loss prices.\n");
-        sb.append("- Risk/reward ratio must be >= 2.0 for a BUY signal.\n");
+        sb.append(
+                "- Always provide specific numeric values for entryPrice, targetPrice, and stopLoss for ALL signals (including HOLD and AVOID). Do not use null, \"N/A\", or \"—\".\n");
+        sb.append(
+                "- For HOLD and AVOID signals, use the current stock price as the entryPrice, next major resistance as targetPrice, and next key support as stopLoss.\n");
+        sb.append(
+                "- Calculate a valid numeric risk/reward ratio for all signals (can be less than 2.0 for HOLD and AVOID).\n");
         sb.append("- Consider current macro environment — avoid aggressive buys in risk-off conditions.\n");
         sb.append("- Factor in sector rotation and relative strength.\n");
         sb.append("- Respond ONLY in valid JSON matching the specified schema.\n");
-        sb.append("- Include a 2-3 sentence plain English reasoning.\n");
+        sb.append(
+                "- The reasoning field is the ONLY place where comments, descriptions, or textual analysis are allowed.\n");
+        sb.append(
+                "- For the factors in the model factor matrix (technical, fundamental, macro, and sentiment), you MUST only provide \"BULLISH\", \"NEUTRAL\", or \"BEARISH\". Do not write sentences, descriptions, or comments in the factors fields.\n");
+        sb.append("- Include a 2-3 sentence plain English reasoning in the reasoning field.\n");
         sb.append("- If data is insufficient or conflicting, default to HOLD.\n");
         sb.append("- This is NOT financial advice — frame as analytical output.");
 
@@ -126,10 +138,10 @@ public class GeminiService {
     }
 
     private String buildUserPrompt(String symbol,
-                                    StockSnapshot snapshot,
-                                    FundamentalData fund,
-                                    MacroSnapshot macro,
-                                    List<String> news) {
+            StockSnapshot snapshot,
+            FundamentalData fund,
+            MacroSnapshot macro,
+            List<String> news) {
 
         StringBuilder sb = new StringBuilder();
         sb.append("Analyze ").append(symbol).append(" for a position trade (2-8 week hold).\n\n");
@@ -148,14 +160,16 @@ public class GeminiService {
             sb.append("52-week range: $").append(fmt(fund.getLow52Week()));
             sb.append(" - $").append(fmt(fund.getHigh52Week())).append("\n");
             sb.append("Avg volume: ").append(fund.getAvgVolume() != null ? fund.getAvgVolume() : "N/A");
-            sb.append(" | Today's volume: ").append(snapshot.getVolume() != null ? snapshot.getVolume() : "N/A").append("\n");
+            sb.append(" | Today's volume: ").append(snapshot.getVolume() != null ? snapshot.getVolume() : "N/A")
+                    .append("\n");
         }
 
         // Fundamentals
         sb.append("\nFUNDAMENTALS:\n");
         if (fund != null) {
             sb.append("Sector: ").append(fund.getSector() != null ? fund.getSector() : "N/A");
-            sb.append(" | Market Cap: $").append(fund.getMarketCap() != null ? fund.getMarketCap() + "M" : "N/A").append("\n");
+            sb.append(" | Market Cap: $").append(fund.getMarketCap() != null ? fund.getMarketCap() + "M" : "N/A")
+                    .append("\n");
             sb.append("P/E: ").append(fmtDbl(fund.getPeRatio()));
             sb.append(" | EPS growth (YoY): ").append(fmtDbl(fund.getEpsGrowthYoY())).append("%\n");
             sb.append("Revenue growth (YoY): ").append(fmtDbl(fund.getRevenueGrowthYoY())).append("%");
@@ -170,7 +184,8 @@ public class GeminiService {
             sb.append("Fed Funds Rate: ").append(fmtDbl(macro.getFedFundsRate())).append("%");
             sb.append(" | 10Y Treasury: ").append(fmtDbl(macro.getTreasury10Y())).append("%\n");
             sb.append("CPI (YoY): ").append(fmtDbl(macro.getCpiYoY())).append("%");
-            sb.append(" | S&P 500 vs 200-SMA: ").append(macro.getSpyVs200SMA() != null ? macro.getSpyVs200SMA() : "N/A");
+            sb.append(" | S&P 500 vs 200-SMA: ")
+                    .append(macro.getSpyVs200SMA() != null ? macro.getSpyVs200SMA() : "N/A");
             sb.append(" | VIX: ").append(fmtDbl(macro.getVix())).append("\n");
         } else {
             sb.append("Macro data unavailable.\n");
@@ -192,13 +207,37 @@ public class GeminiService {
         sb.append("\"entryPrice\": X.XX, \"targetPrice\": X.XX, \"stopLoss\": X.XX, ");
         sb.append("\"riskRewardRatio\": X.XX, \"timeHorizon\": \"X weeks\", ");
         sb.append("\"reasoning\": \"...\", \"factors\": {\"technical\": \"BULLISH|NEUTRAL|BEARISH\", ");
-        sb.append("\"fundamental\": \"...\", \"macro\": \"...\", \"sentiment\": \"...\"}}");
+        sb.append(
+                "\"fundamental\": \"BULLISH|NEUTRAL|BEARISH\", \"macro\": \"BULLISH|NEUTRAL|BEARISH\", \"sentiment\": \"BULLISH|NEUTRAL|BEARISH\"}}");
 
         return sb.toString();
     }
 
+    /**
+     * Generic Gemini call using the configured primary model with fallback.
+     * Can be used by any service needing AI text generation.
+     *
+     * @param systemPrompt the system instruction
+     * @param userPrompt   the user prompt
+     * @return raw JSON text from Gemini
+     */
+    public String callGeminiGeneric(String systemPrompt, String userPrompt) {
+        String primaryModel = props.getGemini().getModel();
+        try {
+            return callGemini(primaryModel, systemPrompt, userPrompt);
+        } catch (Exception e) {
+            String fallbackModel = props.getGemini().getFallbackModel();
+            if (fallbackModel != null && !fallbackModel.isBlank() && !fallbackModel.equals(primaryModel)) {
+                log.warn("Generic call: primary model ({}) failed: {}. Trying fallback ({})",
+                        primaryModel, e.getMessage(), fallbackModel);
+                return callGemini(fallbackModel, systemPrompt, userPrompt);
+            }
+            throw e;
+        }
+    }
+
     @SuppressWarnings("unchecked")
-    private String callGemini(String model, String systemPrompt, String userPrompt) {
+    String callGemini(String model, String systemPrompt, String userPrompt) {
         String apiKey = props.getGemini().getApiKey();
         String url = String.format(GEMINI_API_URL_TEMPLATE, model, apiKey);
 
@@ -208,19 +247,13 @@ public class GeminiService {
         Map<String, Object> body = Map.of(
                 "contents", List.of(
                         Map.of("parts", List.of(
-                                Map.of("text", userPrompt)
-                        ))
-                ),
+                                Map.of("text", userPrompt)))),
                 "systemInstruction", Map.of(
                         "parts", List.of(
-                                Map.of("text", systemPrompt)
-                        )
-                ),
+                                Map.of("text", systemPrompt))),
                 "generationConfig", Map.of(
                         "responseMimeType", "application/json",
-                        "temperature", props.getGemini().getTemperature()
-                )
-        );
+                        "temperature", props.getGemini().getTemperature()));
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 

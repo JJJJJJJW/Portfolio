@@ -33,6 +33,19 @@ public class TwelveDataService {
     @Value("${TWELVEDATA_API_KEY:}")
     private String apiKey;
 
+    private static class CachedPrice {
+        final double price;
+        final long timestamp;
+
+        CachedPrice(double price, long timestamp) {
+            this.price = price;
+            this.timestamp = timestamp;
+        }
+    }
+
+    private final Map<String, CachedPrice> priceCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long CACHE_TTL_MS = 60 * 1000L; // 60 seconds
+
     public TwelveDataService() {
         this.jsonParser = JsonParserFactory.getJsonParser();
 
@@ -57,6 +70,13 @@ public class TwelveDataService {
         if (isBursaSymbol(cleanSymbol)) {
             log.info("Bursa symbol {} bypassed Twelve Data price lookup and returned 0.0", cleanSymbol);
             return 0.0;
+        }
+
+        // Cache lookup
+        CachedPrice cached = priceCache.get(cleanSymbol);
+        if (cached != null && (System.currentTimeMillis() - cached.timestamp < CACHE_TTL_MS)) {
+            log.debug("Twelve Data price cache HIT for symbol: {}", cleanSymbol);
+            return cached.price;
         }
 
         if (apiKey == null || apiKey.isBlank()) {
@@ -92,7 +112,9 @@ public class TwelveDataService {
             if (root.containsKey("price")) {
                 String priceStr = root.get("price").toString();
                 try {
-                    return Double.parseDouble(priceStr);
+                    double price = Double.parseDouble(priceStr);
+                    priceCache.put(cleanSymbol, new CachedPrice(price, System.currentTimeMillis()));
+                    return price;
                 } catch (NumberFormatException e) {
                     log.error("Failed to parse price '{}' as double for symbol: {}", priceStr, cleanSymbol, e);
                     return 0.0;
@@ -130,15 +152,31 @@ public class TwelveDataService {
             return Map.of();
         }
 
-        if (apiKey == null || apiKey.isBlank()) {
-            log.warn("Twelve Data API key is not configured, returning empty prices map");
-            return Map.of();
+        Map<String, Double> result = new HashMap<>();
+        List<String> symbolsToFetch = new ArrayList<>();
+        long now = System.currentTimeMillis();
+
+        for (String sym : cleanSymbols) {
+            CachedPrice cached = priceCache.get(sym);
+            if (cached != null && (now - cached.timestamp < CACHE_TTL_MS)) {
+                log.debug("Twelve Data price cache HIT for batch symbol: {}", sym);
+                result.put(sym, cached.price);
+            } else {
+                symbolsToFetch.add(sym);
+            }
         }
 
-        Map<String, Double> result = new HashMap<>();
+        if (symbolsToFetch.isEmpty()) {
+            return result;
+        }
+
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("Twelve Data API key is not configured, returning empty prices map");
+            return result;
+        }
 
         try {
-            String symbolsParam = String.join(",", cleanSymbols);
+            String symbolsParam = String.join(",", symbolsToFetch);
             String url = UriComponentsBuilder.fromUriString("https://api.twelvedata.com/price")
                     .queryParam("symbol", symbolsParam)
                     .queryParam("apikey", apiKey)
@@ -150,7 +188,7 @@ public class TwelveDataService {
 
             if (responseBody == null || responseBody.isBlank()) {
                 log.warn("Received empty batch response from Twelve Data");
-                return Map.of();
+                return result;
             }
 
             // Parse response locally to allow rapid GC collection
@@ -161,16 +199,17 @@ public class TwelveDataService {
                 String errorMsg = root.getOrDefault("message", "Unknown error").toString();
                 String errorCode = root.getOrDefault("code", "0").toString();
                 log.error("Twelve Data API batch error (code: {}): {}", errorCode, errorMsg);
-                return Map.of();
+                return result;
             }
 
             // Single symbol query returns flat format: {"price": "150.00"}
-            if (cleanSymbols.size() == 1) {
-                String singleSymbol = cleanSymbols.get(0);
+            if (symbolsToFetch.size() == 1) {
+                String singleSymbol = symbolsToFetch.get(0);
                 if (root.containsKey("price")) {
                     try {
                         double price = Double.parseDouble(root.get("price").toString());
                         result.put(singleSymbol, price);
+                        priceCache.put(singleSymbol, new CachedPrice(price, now));
                     } catch (NumberFormatException e) {
                         log.error("Failed to parse single price '{}' for symbol: {}", root.get("price"), singleSymbol, e);
                     }
@@ -191,6 +230,7 @@ public class TwelveDataService {
                         try {
                             double price = Double.parseDouble(symbolData.get("price").toString());
                             result.put(sym, price);
+                            priceCache.put(sym, new CachedPrice(price, now));
                         } catch (NumberFormatException e) {
                             log.error("Failed to parse price '{}' for symbol: {}", symbolData.get("price"), sym, e);
                         }

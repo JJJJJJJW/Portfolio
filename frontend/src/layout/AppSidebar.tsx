@@ -257,7 +257,7 @@ const AppSidebar: React.FC = () => {
           }`}
       >
         <Link
-          to="/"
+          to="/dashboard"
           onClick={(e) => {
             if (location.pathname === '/dashboard') {
               e.preventDefault();
