@@ -20,6 +20,8 @@ public class StockAnalyzerProperties {
     private Finnhub finnhub = new Finnhub();
     private Screening screening = new Screening();
     private WatchlistConfig watchlist = new WatchlistConfig();
+    private Queue queue = new Queue();
+    private Notification notification = new Notification();
 
     // =========================================================================
     // Nested Configuration Classes
@@ -108,6 +110,56 @@ public class StockAnalyzerProperties {
         public void setMaxTickers(int maxTickers) { this.maxTickers = maxTickers; }
     }
 
+    /**
+     * PGMQ queue consumer configuration.
+     */
+    public static class Queue {
+        /** Whether the queue consumer poller is enabled. */
+        private boolean consumerEnabled = true;
+        /** Delay between polls in milliseconds. */
+        private int pollIntervalMs = 5000;
+        /** How long a message is invisible after being read (seconds). */
+        private int visibilityTimeoutSec = 120;
+        /** Max retries before moving to DLQ. */
+        private int maxRetries = 3;
+        /** DLQ retry check interval in milliseconds (default 1 hour). */
+        private int dlqRetryIntervalMs = 3600000;
+
+        public boolean isConsumerEnabled() { return consumerEnabled; }
+        public void setConsumerEnabled(boolean consumerEnabled) { this.consumerEnabled = consumerEnabled; }
+        public int getPollIntervalMs() { return pollIntervalMs; }
+        public void setPollIntervalMs(int pollIntervalMs) { this.pollIntervalMs = pollIntervalMs; }
+        public int getVisibilityTimeoutSec() { return visibilityTimeoutSec; }
+        public void setVisibilityTimeoutSec(int visibilityTimeoutSec) { this.visibilityTimeoutSec = visibilityTimeoutSec; }
+        public int getMaxRetries() { return maxRetries; }
+        public void setMaxRetries(int maxRetries) { this.maxRetries = maxRetries; }
+        public int getDlqRetryIntervalMs() { return dlqRetryIntervalMs; }
+        public void setDlqRetryIntervalMs(int dlqRetryIntervalMs) { this.dlqRetryIntervalMs = dlqRetryIntervalMs; }
+    }
+
+    /**
+     * BUY signal notification configuration.
+     */
+    public static class Notification {
+        /** Whether email notifications are enabled. */
+        private boolean enabled = true;
+        /** Admin email to receive BUY signal alerts. */
+        private String emailTo;
+        /** Sender email address. */
+        private String emailFrom = "noreply@techfolio.app";
+        /** Minimum confidence for a BUY signal to trigger a notification. */
+        private int buyConfidenceThreshold = 70;
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+        public String getEmailTo() { return emailTo; }
+        public void setEmailTo(String emailTo) { this.emailTo = emailTo; }
+        public String getEmailFrom() { return emailFrom; }
+        public void setEmailFrom(String emailFrom) { this.emailFrom = emailFrom; }
+        public int getBuyConfidenceThreshold() { return buyConfidenceThreshold; }
+        public void setBuyConfidenceThreshold(int buyConfidenceThreshold) { this.buyConfidenceThreshold = buyConfidenceThreshold; }
+    }
+
     // =========================================================================
     // Top-level Getters & Setters
     // =========================================================================
@@ -136,4 +188,10 @@ public class StockAnalyzerProperties {
 
     public WatchlistConfig getWatchlist() { return watchlist; }
     public void setWatchlist(WatchlistConfig watchlist) { this.watchlist = watchlist; }
+
+    public Queue getQueue() { return queue; }
+    public void setQueue(Queue queue) { this.queue = queue; }
+
+    public Notification getNotification() { return notification; }
+    public void setNotification(Notification notification) { this.notification = notification; }
 }

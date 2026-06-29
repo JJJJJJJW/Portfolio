@@ -12,6 +12,7 @@ import com.ace.techfolio.config.StockAnalyzerProperties;
 import com.ace.techfolio.repository.UserRepository;
 import com.ace.techfolio.repository.stockanalyzer.TradingSignalRepository;
 import com.ace.techfolio.repository.stockanalyzer.WatchlistRepository;
+import com.ace.techfolio.service.queue.QueueService;
 import com.ace.techfolio.service.stockanalyzer.StockAnalyzerOrchestrator;
 
 import jakarta.validation.Valid;
@@ -33,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -56,17 +58,20 @@ public class StockAnalyzerController {
     private final TradingSignalRepository signalRepo;
     private final UserRepository userRepo;
     private final StockAnalyzerProperties props;
+    private final QueueService queueService;
 
     public StockAnalyzerController(StockAnalyzerOrchestrator orchestrator,
                                     WatchlistRepository watchlistRepo,
                                     TradingSignalRepository signalRepo,
                                     UserRepository userRepo,
-                                    StockAnalyzerProperties props) {
+                                    StockAnalyzerProperties props,
+                                    QueueService queueService) {
         this.orchestrator = orchestrator;
         this.watchlistRepo = watchlistRepo;
         this.signalRepo = signalRepo;
         this.userRepo = userRepo;
         this.props = props;
+        this.queueService = queueService;
     }
 
     // =========================================================================
@@ -240,6 +245,41 @@ public class StockAnalyzerController {
         response.setTotalPages(signals.getTotalPages());
 
         return ResponseEntity.ok(response);
+    }
+
+    // =========================================================================
+    // Queue Monitoring
+    // =========================================================================
+
+    /**
+     * Returns the current depth of all PGMQ queues.
+     * Useful for monitoring pipeline health.
+     */
+    @GetMapping("/queue-status")
+    public ResponseEntity<Map<String, Object>> getQueueStatus(
+            @AuthenticationPrincipal Jwt jwt) {
+
+        if (jwt == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Map<String, Object> status = new LinkedHashMap<>();
+        try {
+            status.put("stockAnalysisQueue", Map.of(
+                    "depth", queueService.getQueueDepth("stock_analysis_queue"),
+                    "status", "active"));
+            status.put("stockAnalysisFailed", Map.of(
+                    "depth", queueService.getQueueDepth("stock_analysis_failed"),
+                    "status", "active"));
+            status.put("userNotifications", Map.of(
+                    "depth", queueService.getQueueDepth("user_notifications"),
+                    "status", "active"));
+        } catch (Exception e) {
+            log.error("Failed to fetch queue status: {}", e.getMessage());
+            status.put("error", "Failed to fetch queue depths: " + e.getMessage());
+        }
+
+        return ResponseEntity.ok(status);
     }
 
     // =========================================================================
