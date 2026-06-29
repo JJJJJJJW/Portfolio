@@ -321,12 +321,17 @@ const PLCalendar: React.FC = () => {
       // 1. Remove milliseconds/microseconds if present
       const cleanTs = ts.split(".")[0];
       
-      // 2. Parse date as local time (no Z appended) to avoid timezone shift
-      const normalized = cleanTs.replace(" ", "T");
+      // 2. Parse date in UTC (append Z if no timezone offset is present)
+      let normalized = cleanTs.replace(" ", "T");
+      const timePart = normalized.split("T")[1] || "";
+      if (!normalized.endsWith("Z") && !timePart.includes("+") && !timePart.includes("-")) {
+        normalized = normalized + "Z";
+      }
       const date = new Date(normalized);
       
       if (!isNaN(date.getTime())) {
-        return date.toLocaleString(undefined, {
+        return date.toLocaleString("en-US", {
+          timeZone: "Asia/Singapore",
           dateStyle: "medium",
           timeStyle: "short",
         });
@@ -335,6 +340,14 @@ const PLCalendar: React.FC = () => {
       // Fallback: strip seconds from "YYYY-MM-DD HH:mm:ss"
       const match = cleanTs.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
       if (match) {
+        const fallbackDate = new Date(`${match[1]}T${match[2]}:00Z`);
+        if (!isNaN(fallbackDate.getTime())) {
+          return fallbackDate.toLocaleString("en-US", {
+            timeZone: "Asia/Singapore",
+            dateStyle: "medium",
+            timeStyle: "short",
+          });
+        }
         return `${match[1]} ${match[2]}`;
       }
       return cleanTs;
