@@ -17,7 +17,7 @@ export default function UserDropdown() {
     setIsOpen(false);
   }
 
-  const avatarSrc = user?.avatarUrl || "/images/user/owner.jpg";
+  const avatarSrc = user?.avatarUrl || "/images/user/user-01.jpg";
   const displayName = user?.displayName || "Guest";
   const userEmail = user?.email || "guest@gmail.com";
 

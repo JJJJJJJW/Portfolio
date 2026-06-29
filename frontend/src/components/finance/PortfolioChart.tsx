@@ -9,7 +9,7 @@ interface PortfolioChartProps {
 }
 
 export default function PortfolioChart({ chartData, currency }: PortfolioChartProps) {
-  const [timeframe, setTimeframe] = useState<"daily" | "monthly">("monthly");
+  const [timeframe, setTimeframe] = useState<"daily" | "monthly">("daily");
 
   const prefix = currency === "MYR" ? "RM " : "$";
 
