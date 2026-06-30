@@ -83,7 +83,7 @@ const AppHeader: React.FC = () => {
             {/* Cross Icon */}
           </button>
 
-          <Link to="/" className="lg:hidden">
+          <Link to="/dashboard" className="lg:hidden">
             <div className="flex items-center gap-3">
               <img
                 className="rounded-lg"

@@ -343,7 +343,7 @@ export default function Positions() {
         {/* Page Header & Tabs */}
         <div className={`transition-all duration-1000 delay-100 ease-out ${isVisible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-30 blur-xs'}`}>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Investment Tracking</h1>
-          <div className="flex border-b border-gray-200 dark:border-gray-800">
+          <div className="flex justify-center md:justify-start border-b border-gray-200 dark:border-gray-800">
             <button
               onClick={() => setActiveTab("positions")}
               className={`px-6 py-3 text-sm font-semibold transition-all relative ${activeTab === "positions"
@@ -402,7 +402,7 @@ export default function Positions() {
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Click on any asset to view performance details and transaction history.</p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between gap-3">
                   {/* Currency Toggle */}
                   <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-800 p-0.5 bg-gray-50 dark:bg-gray-950">
                     <button
@@ -496,7 +496,7 @@ export default function Positions() {
                         🇺🇸 Assets
                       </h3>
                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                        Subtotal: ${usdTotalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })} | P/L:{" "}
+                        <span className="hidden sm:inline">Subtotal: </span>${usdTotalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })} | P/L:{" "}
                         <span className={usdTotalPl >= 0 ? "text-brand-500" : "text-red-500"}>
                           {usdTotalPl >= 0 ? "+" : ""}${usdTotalPl.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </span>
@@ -506,52 +506,98 @@ export default function Positions() {
                     {usdPositions.length === 0 ? (
                       <p className="text-xs text-gray-400 dark:text-gray-600 italic py-4">No US Dollar assets held.</p>
                     ) : (
-                      <div className="overflow-x-auto custom-scrollbar">
-                        <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                          <thead className="text-xs text-gray-500 uppercase border-b border-gray-200 dark:border-gray-800 dark:text-gray-500">
-                            <tr>
-                              <th className="px-4 py-3 font-semibold">Asset</th>
-                              <th className="px-4 py-3 font-semibold text-right">Quantity</th>
-                              <th className="px-4 py-3 font-semibold text-right">Avg Price</th>
-                              <th className="px-4 py-3 font-semibold text-right">Current Price Per Share</th>
-                              <th className="px-4 py-3 font-semibold text-right">Total Cost</th>
-                              <th className="px-4 py-3 font-semibold text-right">Total Value</th>
-                              <th className="px-4 py-3 font-semibold text-right">P/L</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {usdPositions.map((pos, idx) => (
-                              <tr
-                                key={pos.id}
-                                onClick={() => setSelectedPosition(pos)}
-                                className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer ${idx === usdPositions.length - 1 ? "border-b-0" : ""
-                                  }`}
-                              >
-                                <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">
-                                  <div className="flex flex-col">
-                                    <span>{pos.name}</span>
-                                    {pos.category && (
-                                      <span className="text-[10px] text-gray-400 font-normal uppercase tracking-wider mt-0.5">
-                                        {pos.category.replace("_", " ")}
-                                      </span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-4 text-right">{pos.quantity.toFixed(2)}</td>
-                                <td className="px-4 py-4 text-right">${pos.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                <td className="px-4 py-4 text-right">${pos.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                <td className="px-4 py-4 text-right">${(pos.quantity * pos.avgPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                <td className="px-4 py-4 text-right font-medium text-gray-900 dark:text-white">
-                                  ${pos.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </td>
-                                <td className={`px-4 py-4 text-right font-medium ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                      <>
+                        {/* Mobile Card View */}
+                        <div className="md:hidden space-y-3">
+                          {usdPositions.map((pos) => (
+                            <div
+                              key={pos.id}
+                              onClick={() => setSelectedPosition(pos)}
+                              className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-4 border border-gray-100 dark:border-gray-800 cursor-pointer active:scale-[0.99] transition-all hover:border-gray-200 dark:hover:border-gray-700"
+                            >
+                              <div className="flex justify-between items-start mb-3">
+                                <div>
+                                  <span className="font-semibold text-gray-900 dark:text-white text-sm">{pos.name}</span>
+                                  {pos.category && (
+                                    <span className="text-[10px] text-gray-400 font-normal uppercase tracking-wider block mt-0.5">
+                                      {pos.category.replace("_", " ")}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className={`text-sm font-bold ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
                                   {pos.pl >= 0 ? "+" : ""}${pos.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </td>
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500 dark:text-gray-400">Qty</span>
+                                  <span className="text-gray-900 dark:text-white font-medium">{pos.quantity.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500 dark:text-gray-400">Avg</span>
+                                  <span className="text-gray-900 dark:text-white font-medium">${pos.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500 dark:text-gray-400">Price</span>
+                                  <span className="text-gray-900 dark:text-white font-medium">${pos.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500 dark:text-gray-400">Value</span>
+                                  <span className="text-gray-900 dark:text-white font-bold">${pos.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block overflow-x-auto custom-scrollbar">
+                          <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                            <thead className="text-xs text-gray-500 uppercase border-b border-gray-200 dark:border-gray-800 dark:text-gray-500">
+                              <tr>
+                                <th className="px-4 py-3 font-semibold">Asset</th>
+                                <th className="px-4 py-3 font-semibold text-right">Quantity</th>
+                                <th className="px-4 py-3 font-semibold text-right">Avg Price</th>
+                                <th className="px-4 py-3 font-semibold text-right">Current Price Per Share</th>
+                                <th className="px-4 py-3 font-semibold text-right">Total Cost</th>
+                                <th className="px-4 py-3 font-semibold text-right">Total Value</th>
+                                <th className="px-4 py-3 font-semibold text-right">P/L</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                            </thead>
+                            <tbody>
+                              {usdPositions.map((pos, idx) => (
+                                <tr
+                                  key={pos.id}
+                                  onClick={() => setSelectedPosition(pos)}
+                                  className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer ${idx === usdPositions.length - 1 ? "border-b-0" : ""
+                                    }`}
+                                >
+                                  <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">
+                                    <div className="flex flex-col">
+                                      <span>{pos.name}</span>
+                                      {pos.category && (
+                                        <span className="text-[10px] text-gray-400 font-normal uppercase tracking-wider mt-0.5">
+                                          {pos.category.replace("_", " ")}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-4 text-right">{pos.quantity.toFixed(2)}</td>
+                                  <td className="px-4 py-4 text-right">${pos.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                  <td className="px-4 py-4 text-right">${pos.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                  <td className="px-4 py-4 text-right">${(pos.quantity * pos.avgPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                  <td className="px-4 py-4 text-right font-medium text-gray-900 dark:text-white">
+                                    ${pos.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
+                                  <td className={`px-4 py-4 text-right font-medium ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                                    {pos.pl >= 0 ? "+" : ""}${pos.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
                     )}
                   </div>
 
@@ -562,7 +608,7 @@ export default function Positions() {
                         🇲🇾 Assets
                       </h3>
                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                        Subtotal: RM {rmTotalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })} | P/L:{" "}
+                        <span className="hidden sm:inline">Subtotal: </span>RM {rmTotalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })} | P/L:{" "}
                         <span className={rmTotalPl >= 0 ? "text-brand-500" : "text-red-500"}>
                           {rmTotalPl >= 0 ? "+" : ""}RM {rmTotalPl.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </span>
@@ -572,52 +618,98 @@ export default function Positions() {
                     {rmPositions.length === 0 ? (
                       <p className="text-xs text-gray-400 dark:text-gray-600 italic py-4">No Malaysian Ringgit assets held.</p>
                     ) : (
-                      <div className="overflow-x-auto custom-scrollbar">
-                        <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                          <thead className="text-xs text-gray-500 uppercase border-b border-gray-200 dark:border-gray-800 dark:text-gray-500">
-                            <tr>
-                              <th className="px-4 py-3 font-semibold">Asset</th>
-                              <th className="px-4 py-3 font-semibold text-right">Quantity</th>
-                              <th className="px-4 py-3 font-semibold text-right">Avg Price</th>
-                              <th className="px-4 py-3 font-semibold text-right">Current Price Per Share</th>
-                              <th className="px-4 py-3 font-semibold text-right">Total Cost</th>
-                              <th className="px-4 py-3 font-semibold text-right">Total Value</th>
-                              <th className="px-4 py-3 font-semibold text-right">P/L</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {rmPositions.map((pos, idx) => (
-                              <tr
-                                key={pos.id}
-                                onClick={() => setSelectedPosition(pos)}
-                                className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer ${idx === rmPositions.length - 1 ? "border-b-0" : ""
-                                  }`}
-                              >
-                                <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">
-                                  <div className="flex flex-col">
-                                    <span>{pos.name}</span>
-                                    {pos.category && (
-                                      <span className="text-[10px] text-gray-400 font-normal uppercase tracking-wider mt-0.5">
-                                        {pos.category.replace("_", " ")}
-                                      </span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-4 text-right">{pos.quantity.toFixed(2)}</td>
-                                <td className="px-4 py-4 text-right">RM {pos.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                <td className="px-4 py-4 text-right">RM {pos.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                <td className="px-4 py-4 text-right">RM {(pos.quantity * pos.avgPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                <td className="px-4 py-4 text-right font-medium text-gray-900 dark:text-white">
-                                  RM {pos.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </td>
-                                <td className={`px-4 py-4 text-right font-medium ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                      <>
+                        {/* Mobile Card View */}
+                        <div className="md:hidden space-y-3">
+                          {rmPositions.map((pos) => (
+                            <div
+                              key={pos.id}
+                              onClick={() => setSelectedPosition(pos)}
+                              className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-4 border border-gray-100 dark:border-gray-800 cursor-pointer active:scale-[0.99] transition-all hover:border-gray-200 dark:hover:border-gray-700"
+                            >
+                              <div className="flex justify-between items-start mb-3">
+                                <div>
+                                  <span className="font-semibold text-gray-900 dark:text-white text-sm">{pos.name}</span>
+                                  {pos.category && (
+                                    <span className="text-[10px] text-gray-400 font-normal uppercase tracking-wider block mt-0.5">
+                                      {pos.category.replace("_", " ")}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className={`text-sm font-bold ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
                                   {pos.pl >= 0 ? "+" : ""}RM {pos.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </td>
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500 dark:text-gray-400">Qty</span>
+                                  <span className="text-gray-900 dark:text-white font-medium">{pos.quantity.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500 dark:text-gray-400">Avg</span>
+                                  <span className="text-gray-900 dark:text-white font-medium">RM {pos.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500 dark:text-gray-400">Price</span>
+                                  <span className="text-gray-900 dark:text-white font-medium">RM {pos.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500 dark:text-gray-400">Value</span>
+                                  <span className="text-gray-900 dark:text-white font-bold">RM {pos.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block overflow-x-auto custom-scrollbar">
+                          <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                            <thead className="text-xs text-gray-500 uppercase border-b border-gray-200 dark:border-gray-800 dark:text-gray-500">
+                              <tr>
+                                <th className="px-4 py-3 font-semibold">Asset</th>
+                                <th className="px-4 py-3 font-semibold text-right">Quantity</th>
+                                <th className="px-4 py-3 font-semibold text-right">Avg Price</th>
+                                <th className="px-4 py-3 font-semibold text-right">Current Price Per Share</th>
+                                <th className="px-4 py-3 font-semibold text-right">Total Cost</th>
+                                <th className="px-4 py-3 font-semibold text-right">Total Value</th>
+                                <th className="px-4 py-3 font-semibold text-right">P/L</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                            </thead>
+                            <tbody>
+                              {rmPositions.map((pos, idx) => (
+                                <tr
+                                  key={pos.id}
+                                  onClick={() => setSelectedPosition(pos)}
+                                  className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer ${idx === rmPositions.length - 1 ? "border-b-0" : ""
+                                    }`}
+                                >
+                                  <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">
+                                    <div className="flex flex-col">
+                                      <span>{pos.name}</span>
+                                      {pos.category && (
+                                        <span className="text-[10px] text-gray-400 font-normal uppercase tracking-wider mt-0.5">
+                                          {pos.category.replace("_", " ")}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-4 text-right">{pos.quantity.toFixed(2)}</td>
+                                  <td className="px-4 py-4 text-right">RM {pos.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                  <td className="px-4 py-4 text-right">RM {pos.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                  <td className="px-4 py-4 text-right">RM {(pos.quantity * pos.avgPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                  <td className="px-4 py-4 text-right font-medium text-gray-900 dark:text-white">
+                                    RM {pos.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
+                                  <td className={`px-4 py-4 text-right font-medium ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                                    {pos.pl >= 0 ? "+" : ""}RM {pos.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -636,56 +728,108 @@ export default function Positions() {
                   <p className="text-gray-400 dark:text-gray-500 text-sm font-medium">No transactions yet. Add your first transaction to get started.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto custom-scrollbar">
-                  <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                    <thead className="text-xs text-gray-500 uppercase border-b border-gray-200 dark:border-gray-800 dark:text-gray-500">
-                      <tr>
-                        <th className="px-4 py-3 font-semibold">Date</th>
-                        <th className="px-4 py-3 font-semibold">Type</th>
-                        <th className="px-4 py-3 font-semibold">Asset</th>
-                        <th className="px-4 py-3 font-semibold text-right">Quantity</th>
-                        <th className="px-4 py-3 font-semibold text-right">Price</th>
-                        <th className="px-4 py-3 font-semibold text-right">Total Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {transactions.map((tx, idx) => (
-                        <tr
-                          key={tx.id}
-                          className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${idx === transactions.length - 1 ? "border-b-0" : ""
-                            }`}
-                        >
-                          <td className="px-4 py-4">{tx.date}</td>
-                          <td className="px-4 py-4">
+                <>
+                  {/* Mobile Card View */}
+                  <div className="md:hidden space-y-3">
+                    {transactions.map((tx) => (
+                      <div
+                        key={tx.id}
+                        className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-4 border border-gray-100 dark:border-gray-800"
+                      >
+                        <div className="flex justify-between items-start mb-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-gray-900 dark:text-white text-sm">{tx.symbol}</span>
                             {tx.type === "buy" ? (
-                              <span className="inline-flex items-center rounded-full bg-brand-500/10 px-2 py-1 text-xs font-medium text-brand-500 ring-1 ring-inset ring-brand-500/20">
+                              <span className="inline-flex items-center rounded-full bg-brand-500/10 px-2 py-0.5 text-[10px] font-medium text-brand-500 ring-1 ring-inset ring-brand-500/20">
                                 Buy
                               </span>
                             ) : (
-                              <span className="inline-flex items-center rounded-full bg-red-500/10 px-2 py-1 text-xs font-medium text-red-500 ring-1 ring-inset ring-red-500/20">
+                              <span className="inline-flex items-center rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-500 ring-1 ring-inset ring-red-500/20">
                                 Sell
                               </span>
                             )}
-                          </td>
-                          <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">{tx.symbol}</td>
-                          <td className="px-4 py-4 text-right">{tx.quantity.toFixed(4).replace(/\.?0+$/, "")}</td>
-                          <td className="px-4 py-4 text-right">
-                            {tx.currency === "MYR" ? "RM " : "$"}
-                            {tx.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            {tx.customExchangeRate && (
-                              <span className="text-[10px] text-gray-400 block font-normal mt-0.5" title="Custom Exchange Rate">
-                                (FX: {tx.customExchangeRate.toFixed(2)})
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-4 text-right font-medium text-gray-900 dark:text-white">
-                            {tx.currency === "MYR" ? "RM " : "$"}{tx.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </td>
+                          </div>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{tx.date}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">Qty</span>
+                            <span className="text-gray-900 dark:text-white font-medium">{tx.quantity.toFixed(4).replace(/\.?0+$/, "")}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">Price</span>
+                            <span className="text-gray-900 dark:text-white font-medium">
+                              {tx.currency === "MYR" ? "RM " : "$"}{tx.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div className="flex justify-between col-span-2 pt-1 border-t border-gray-100 dark:border-gray-800">
+                            <span className="text-gray-500 dark:text-gray-400">Total</span>
+                            <span className="text-gray-900 dark:text-white font-bold">
+                              {tx.currency === "MYR" ? "RM " : "$"}{tx.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          {tx.customExchangeRate && (
+                            <div className="col-span-2 text-[10px] text-gray-400">
+                              Custom FX Rate: {tx.customExchangeRate.toFixed(2)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                      <thead className="text-xs text-gray-500 uppercase border-b border-gray-200 dark:border-gray-800 dark:text-gray-500">
+                        <tr>
+                          <th className="px-4 py-3 font-semibold">Date</th>
+                          <th className="px-4 py-3 font-semibold">Type</th>
+                          <th className="px-4 py-3 font-semibold">Asset</th>
+                          <th className="px-4 py-3 font-semibold text-right">Quantity</th>
+                          <th className="px-4 py-3 font-semibold text-right">Price</th>
+                          <th className="px-4 py-3 font-semibold text-right">Total Amount</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {transactions.map((tx, idx) => (
+                          <tr
+                            key={tx.id}
+                            className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${idx === transactions.length - 1 ? "border-b-0" : ""
+                              }`}
+                          >
+                            <td className="px-4 py-4">{tx.date}</td>
+                            <td className="px-4 py-4">
+                              {tx.type === "buy" ? (
+                                <span className="inline-flex items-center rounded-full bg-brand-500/10 px-2 py-1 text-xs font-medium text-brand-500 ring-1 ring-inset ring-brand-500/20">
+                                  Buy
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center rounded-full bg-red-500/10 px-2 py-1 text-xs font-medium text-red-500 ring-1 ring-inset ring-red-500/20">
+                                  Sell
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-4 font-medium text-gray-900 dark:text-white">{tx.symbol}</td>
+                            <td className="px-4 py-4 text-right">{tx.quantity.toFixed(4).replace(/\.?0+$/, "")}</td>
+                            <td className="px-4 py-4 text-right">
+                              {tx.currency === "MYR" ? "RM " : "$"}
+                              {tx.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                              {tx.customExchangeRate && (
+                                <span className="text-[10px] text-gray-400 block font-normal mt-0.5" title="Custom Exchange Rate">
+                                  (FX: {tx.customExchangeRate.toFixed(2)})
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-4 text-right font-medium text-gray-900 dark:text-white">
+                              {tx.currency === "MYR" ? "RM " : "$"}{tx.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           )}

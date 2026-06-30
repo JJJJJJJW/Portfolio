@@ -403,17 +403,17 @@ const PLCalendar: React.FC = () => {
       <div ref={containerRef} className="space-y-6 relative h-full">
         {/* Header */}
         <div className={`transition-all duration-1000 delay-100 ease-out ${isVisible ? "opacity-100 translate-y-0 blur-0" : "opacity-0 translate-y-30 blur-xs"}`}>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">P/L Calendar</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Visualize your daily asset performance at a glance.</p>
             </div>
 
             {/* View Toggle */}
-            <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+            <div className="w-full sm:w-auto flex justify-between sm:justify-start items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
               <button
                 onClick={() => setViewMode("month")}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                className={`flex-1 sm:flex-initial text-center px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                   viewMode === "month"
                     ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
@@ -423,7 +423,7 @@ const PLCalendar: React.FC = () => {
               </button>
               <button
                 onClick={() => setViewMode("year")}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                className={`flex-1 sm:flex-initial text-center px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                   viewMode === "year"
                     ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"

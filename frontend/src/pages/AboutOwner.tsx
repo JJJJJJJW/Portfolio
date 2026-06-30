@@ -13,12 +13,16 @@ import {
   Database,
   CheckCircle2,
   ChevronDown,
+  Smartphone,
+  Globe,
+  Layout,
+  Brain,
 } from "lucide-react";
 
 export default function AboutOwner() {
   const [isVisible, setIsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<"skills" | "architecture" | "faq">("skills");
-  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(0);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 100);
@@ -33,12 +37,12 @@ export default function AboutOwner() {
     {
       category: "Backend & Systems",
       icon: <Terminal className="size-5 text-brand-500" />,
-      skills: ["Java (Spring Boot 3.x)", "Microservices Architecture", "RESTful APIs", "Spring Security (JWT)", "JUnit & Mockito Testing", "Log Tracing & Diagnostics"]
+      skills: ["Java (Spring Boot)", "Microservices Architecture", "RESTful APIs", "Spring Security (JWT)", "JUnit & Mockito Testing", "Log Tracing & Diagnostics"]
     },
     {
       category: "Frontend & Data",
       icon: <Code className="size-5 text-brand-500" />,
-      skills: ["TypeScript / JavaScript", "React.js (Functional / Hooks)", "Tailwind CSS v4", "SQL", "Data Analytics & Reporting", "Responsive UI Design"]
+      skills: ["TypeScript / JavaScript", "React.js (Functional / Hooks)", "Tailwind CSS v4", "Data Analytics & Reporting", "Reactbits for Modern UI", "SQL"]
     },
     {
       category: "Database & Cloud",
@@ -50,7 +54,7 @@ export default function AboutOwner() {
   const faqData = [
     {
       question: "Why build this system?",
-      answer: "I wanted to bridge the gap between typical university sandbox prototypes and fully deployed, production-ready systems. Building TechFolio allowed me to solve real-world engineering constraints (like stateless authentication and JVM memory optimization) while pursuing my strong interest in finance, particularly investment tracking and analytics."
+      answer: "I wanted to bridge the gap between typical university project prototypes and fully deployed, production-ready systems. Building TechFolio allowed me to leverage AI capabilities to build while learning, helping me solve real-world engineering constraints (like stateless authentication and JVM memory optimization) while pursuing my strong interest in finance, particularly investment tracking and analytics."
     },
     {
       question: "What is your core development philosophy?",
@@ -93,7 +97,7 @@ export default function AboutOwner() {
             </div>
 
             <h3 className="mt-4 text-xl font-bold text-gray-800 dark:text-white/90">
-              Ace
+              Ng Jun Wai
             </h3>
             <p className="text-sm font-medium text-brand-500 dark:text-brand-400">
               Graduating Software Engineering Student @ TARUMT
@@ -104,7 +108,7 @@ export default function AboutOwner() {
 
             {/* Introduction paragraph */}
             <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-300 text-left">
-               An aspiring Final-year Software Engineering student with hands-on experience building and optimizing  microservices for enterprise payment systems in a global FinTech environment. Experienced to deliver technical solutions across core transaction systems, AI agentic platform and data dashboard within provided timeline. 
+               An aspiring Final-Semester Software Engineering student with hands-on experience building and optimizing  microservices for enterprise payment systems in a global FinTech environment. Experienced to deliver technical solutions across core transaction systems, AI agentic platform and data dashboard within provided timeline. 
             </p>
 
             <hr className="w-full my-5 border-gray-100 dark:border-gray-800" />
@@ -260,7 +264,7 @@ export default function AboutOwner() {
                             Cloud Environment Memory Management
                           </h5>
                           <p className="mt-1 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
-                            Designed to map within restrictive cloud engine constraints. The Spring architecture operates via fine-tuned JVM boundaries (`-Xmx300m -Xss512k`) and active garbage collection profiling, squeezing massive analytical performance out of low-footprint compute environments.
+                            Optimized to run efficiently on a restrictive 512MB RAM cloud container. Fine-tuned JVM configurations (`-Xmx300m -Xss512k`) ensure stable performance and prevent out-of-memory errors.
                           </p>
                         </div>
                       </div>
@@ -273,7 +277,7 @@ export default function AboutOwner() {
                           Stateless Authentication Gateways
                         </h6>
                         <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-300">
-                          Ensures maximum route throughput by operating full stateless filters. Identity claims are cryptographically verified through integrated API filter tokens, safeguarding transactions and verifying domain query boundaries.
+                          Secures API endpoints using stateless JWT authentication. User identities are verified on every request to prevent unauthorized access and protect personal financial data.
                         </p>
                       </div>
 
@@ -283,7 +287,7 @@ export default function AboutOwner() {
                           Message Queuing & Data Isolation
                         </h6>
                         <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-300">
-                          Database protection handles structural separation right at the record boundary. Heavy-duty query workloads are decoupled cleanly into processing channels to keep active server processing free of analytical deadlocks.
+                          Ensures user data privacy through strict database-level query isolation. Heavy tasks like portfolio calculations are handled asynchronously via background queues to keep the app fast and responsive.
                         </p>
                       </div>
                     </div>
@@ -339,14 +343,14 @@ export default function AboutOwner() {
               <div className="relative">
                 <div className="absolute -left-[31px] top-1.5 bg-brand-500 border-4 border-white dark:border-gray-900 size-4 rounded-full"></div>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                  <h5 className="font-bold text-gray-800 dark:text-white/90">
+                  <h5 className="font-bold text-gray-900 dark:text-white/90">
                     Backend Software Engineer Intern 
                   </h5>
                   <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 self-start sm:self-center">
                     Jan 2026 - July 2026
                   </span>
                 </div>
-                <p className="text-xs text-gray-400 mt-0.5">Ant International</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Ant International</p>
                 
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 pl-2">
                   <div className="p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01] hover:border-brand-500/30 transition duration-300">
@@ -354,9 +358,9 @@ export default function AboutOwner() {
                       <div className="p-1.5 rounded-lg bg-brand-500/10 text-brand-500 shrink-0">
                         <Cpu className="size-4" />
                       </div>
-                      <span className="font-bold text-xs text-gray-850 dark:text-white">Core Development & Optimization</span>
+                      <span className="font-bold text-sm text-gray-900 dark:text-white">Microservice Development & Optimization</span>
                     </div>
-                    <p className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                    <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                       Developed and optimized Java and Spring-based backend microservices for card acquiring systems, enhancing payment gateway interfaces to streamline data across integrated applications.
                     </p>
                   </div>
@@ -366,9 +370,9 @@ export default function AboutOwner() {
                       <div className="p-1.5 rounded-lg bg-brand-500/10 text-brand-500 shrink-0">
                         <Terminal className="size-4" />
                       </div>
-                      <span className="font-bold text-xs text-gray-850 dark:text-white">Production & CI/CD Ops</span>
+                      <span className="font-bold text-sm text-gray-900 dark:text-white">Production & CI/CD Ops</span>
                     </div>
-                    <p className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                    <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                       Resolved production transaction processing issues via log tracing, performed code reviews and navigated CI/CD pipelines across release phases.
                     </p>
                   </div>
@@ -378,9 +382,9 @@ export default function AboutOwner() {
                       <div className="p-1.5 rounded-lg bg-brand-500/10 text-brand-500 shrink-0">
                         <Database className="size-4" />
                       </div>
-                      <span className="font-bold text-xs text-gray-850 dark:text-white">Data Engineering</span>
+                      <span className="font-bold text-sm text-gray-900 dark:text-white">Data Reporting</span>
                     </div>
-                    <p className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                    <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                       Designed complex SQL queries utilizing multi-table joins to process large-scale transaction data, ensuring accurate reporting and data integrity for business monitoring.
                     </p>
                   </div>
@@ -390,10 +394,10 @@ export default function AboutOwner() {
                       <div className="p-1.5 rounded-lg bg-brand-500/10 text-brand-500 shrink-0">
                         <CheckCircle2 className="size-4" />
                       </div>
-                      <span className="font-bold text-xs text-gray-850 dark:text-white">Quality & Delivery</span>
+                      <span className="font-bold text-sm text-gray-900 dark:text-white">Quality & Delivery</span>
                     </div>
-                    <p className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
-                      Maintained strict code coverage standards through unit testing with JUnit and Mockito, collaborating with QA and business teams to deliver high-quality features.
+                    <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                      Maintained strict code coverage standards through unit testing with JUnit and Mockito, collaborating with QA and business teams to ensure seamless project delivery.
                     </p>
                   </div>
                 </div>
@@ -403,55 +407,63 @@ export default function AboutOwner() {
               <div className="relative">
                 <div className="absolute -left-[31px] top-1.5 bg-brand-500 border-4 border-white dark:border-gray-900 size-4 rounded-full"></div>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                  <h5 className="font-bold text-gray-800 dark:text-white/90">
+                  <h5 className="font-bold text-gray-900 dark:text-white/90">
                     Bachelor of Software Engineering (Honours)
                   </h5>
                   <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 self-start sm:self-center">
                     July 2024 - July 2026
                   </span>
                 </div>
-                <p className="text-xs text-gray-400 mt-0.5">TAR UMT | First Class Honours — CGPA 3.945 / 4.0</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">TAR UMT | First Class Honours — CGPA 3.945 / 4.0</p>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
                   Focused on advanced software design, algorithmic performance and system optimization. Key coursework and project accomplishments:
                 </p>
                 
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 pl-2">
-                  <div className="p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01]">
-                    <div className="font-semibold text-xs text-gray-850 dark:text-white flex items-center gap-1.5">
-                      <span className="size-1.5 rounded-full bg-brand-500"></span>
-                      Data Structures and Algorithms (Java)
+                  <div className="p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01] hover:border-brand-500/30 transition duration-300">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="p-1.5 rounded-lg bg-brand-500/10 text-brand-500 shrink-0">
+                        <Code className="size-4" />
+                      </div>
+                      <span className="font-bold text-sm text-gray-900 dark:text-white">Data Structures and Algorithms (Java)</span>
                     </div>
-                    <p className="mt-1 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
-                      Collaborated in a team to build a management system, focusing on custom Abstract Data Types (ADTs) and structural data methods.
+                    <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                      Collaborated in a team to build a donation management system, focusing on custom Abstract Data Types (ADTs) and structural data methods.
                     </p>
                   </div>
                   
-                  <div className="p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01]">
-                    <div className="font-semibold text-xs text-gray-850 dark:text-white flex items-center gap-1.5">
-                      <span className="size-1.5 rounded-full bg-brand-500"></span>
-                      Advanced Database Management (SQL, Oracle)
+                  <div className="p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01] hover:border-brand-500/30 transition duration-300">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="p-1.5 rounded-lg bg-brand-500/10 text-brand-500 shrink-0">
+                        <Database className="size-4" />
+                      </div>
+                      <span className="font-bold text-sm text-gray-900 dark:text-white">Advanced Database Management (SQL, Oracle)</span>
                     </div>
-                    <p className="mt-1 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                    <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                       Designed and implemented logical database structures and reporting mechanisms for a Library Management System using SQL and ERDs.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01]">
-                    <div className="font-semibold text-xs text-gray-850 dark:text-white flex items-center gap-1.5">
-                      <span className="size-1.5 rounded-full bg-brand-500"></span>
-                      Mobile App Development (Flutter)
+                  <div className="p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01] hover:border-brand-500/30 transition duration-300">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="p-1.5 rounded-lg bg-brand-500/10 text-brand-500 shrink-0">
+                        <Smartphone className="size-4" />
+                      </div>
+                      <span className="font-bold text-sm text-gray-900 dark:text-white">Mobile App Development (Flutter)</span>
                     </div>
-                    <p className="mt-1 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                    <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                       Worked in a team to develop a cross-platform mobile workshop management application tailored for manager workflows.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01]">
-                    <div className="font-semibold text-xs text-gray-850 dark:text-white flex items-center gap-1.5">
-                      <span className="size-1.5 rounded-full bg-brand-500"></span>
-                      Artificial Intelligence (Python)
+                  <div className="p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01] hover:border-brand-500/30 transition duration-300">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="p-1.5 rounded-lg bg-brand-500/10 text-brand-500 shrink-0">
+                        <Brain className="size-4" />
+                      </div>
+                      <span className="font-bold text-sm text-gray-900 dark:text-white">Artificial Intelligence (Python)</span>
                     </div>
-                    <p className="mt-1 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                    <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                       Collaborated to design a movie recommender system utilizing collaborative filtering and recommender algorithms.
                     </p>
                   </div>
@@ -462,56 +474,64 @@ export default function AboutOwner() {
               <div className="relative">
                 <div className="absolute -left-[31px] top-1.5 bg-brand-500 border-4 border-white dark:border-gray-900 size-4 rounded-full"></div>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                  <h5 className="font-bold text-gray-800 dark:text-white/90">
+                  <h5 className="font-bold text-gray-900 dark:text-white/90">
                     Diploma in Information Technology
                   </h5>
                   <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 self-start sm:self-center">
                     July 2022 - July 2024
                   </span>
                 </div>
-                <p className="text-xs text-gray-400 mt-0.5">TAR UMT | Graduation with Distinction — CGPA 3.955 / 4.0</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">TAR UMT | Graduation with Distinction — CGPA 3.955 / 4.0</p>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                  Established foundational programming skills d introductory artificial intelligence. Coursework project highlights:
+                  Established foundational programming skills in Java, HTML, CSS, SQL, JavaScript and PHP. Coursework project highlights:
                 </p>
                 
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 pl-2">
-                  <div className="p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01]">
-                    <div className="font-semibold text-xs text-gray-850 dark:text-white flex items-center gap-1.5">
-                      <span className="size-1.5 rounded-full bg-brand-500"></span>
-                      Object-Oriented Programming (Java)
+                  <div className="p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01] hover:border-brand-500/30 transition duration-300">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="p-1.5 rounded-lg bg-brand-500/10 text-brand-500 shrink-0">
+                        <Code className="size-4" />
+                      </div>
+                      <span className="font-bold text-sm text-gray-900 dark:text-white">Object-Oriented Programming (Java)</span>
                     </div>
-                    <p className="mt-1 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                    <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                       Created a Point of Sales (POS) system emphasizing inheritance, polymorphism and class-level abstractions.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01]">
-                    <div className="font-semibold text-xs text-gray-850 dark:text-white flex items-center gap-1.5">
-                      <span className="size-1.5 rounded-full bg-brand-500"></span>
-                      Integrated Web Systems (PHP, Bootstrap)
+                  <div className="p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01] hover:border-brand-500/30 transition duration-300">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="p-1.5 rounded-lg bg-brand-500/10 text-brand-500 shrink-0">
+                        <Globe className="size-4" />
+                      </div>
+                      <span className="font-bold text-sm text-gray-900 dark:text-white">Integrated Web Systems (PHP, Bootstrap)</span>
                     </div>
-                    <p className="mt-1 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                    <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                       Developed a full-stack online bookstore, integrating Stripe payment gateway API and modular PHP libraries.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01]">
-                    <div className="font-semibold text-xs text-gray-850 dark:text-white flex items-center gap-1.5">
-                      <span className="size-1.5 rounded-full bg-brand-500"></span>
-                      Web Design and Development
+                  <div className="p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01] hover:border-brand-500/30 transition duration-300">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="p-1.5 rounded-lg bg-brand-500/10 text-brand-500 shrink-0">
+                        <Layout className="size-4" />
+                      </div>
+                      <span className="font-bold text-sm text-gray-900 dark:text-white">Web Design and Development</span>
                     </div>
-                    <p className="mt-1 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                    <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                       Collaborated in a team to design and build static web applications using semantic HTML, CSS and JavaScript.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01]">
-                    <div className="font-semibold text-xs text-gray-850 dark:text-white flex items-center gap-1.5">
-                      <span className="size-1.5 rounded-full bg-brand-500"></span>
-                      Database Development and Applications
+                  <div className="p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01] hover:border-brand-500/30 transition duration-300">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="p-1.5 rounded-lg bg-brand-500/10 text-brand-500 shrink-0">
+                        <Database className="size-4" />
+                      </div>
+                      <span className="font-bold text-sm text-gray-900 dark:text-white">Database Development and Applications</span>
                     </div>
-                    <p className="mt-1 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
-                      Worked in a team to design logical schemas, views and generate standard reports for transactional database systems.
+                    <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                      Worked in a team to design logical schemas, views and generate reports for transactional database systems.
                     </p>
                   </div>
                 </div>

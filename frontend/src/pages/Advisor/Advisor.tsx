@@ -661,10 +661,10 @@ export default function Advisor() {
         <div className={`transition-all duration-1000 delay-100 ease-out ${isVisible ? "opacity-100 translate-y-0 blur-0" : "opacity-0 translate-y-30 blur-xs"}`}>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">AI Financial Advisor</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Harness personalized diagnostic advice by packaging your assets and active saving targets.
+            Get personalized diagnostic advice by analysing your assets.
           </p>
           
-          <div className="flex border-b border-gray-200 dark:border-gray-800 mt-5">
+          <div className="flex justify-center md:justify-start border-b border-gray-200 dark:border-gray-800 mt-5">
             <button
               onClick={() => setActiveTab("analyzer")}
               className={`px-6 py-3 text-sm font-semibold transition-all relative ${
@@ -1039,91 +1039,165 @@ export default function Advisor() {
                   <p className="text-xs text-gray-400 mt-1">Run your first portfolio audit to start tracking recommendations.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto custom-scrollbar">
-                  <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                    <thead className="text-[10px] text-gray-500 uppercase border-b border-gray-150 dark:border-gray-800">
-                      <tr>
-                        <th className="px-4 py-3 font-semibold">Audit Date</th>
-                        <th className="px-4 py-3 font-semibold text-right">Portfolio Value</th>
-                        <th className="px-4 py-3 font-semibold text-right">Risk Score</th>
-                        <th className="px-4 py-3 font-semibold text-right">Timeline</th>
-                        <th className="px-4 py-3 font-semibold text-right">Findings</th>
-                        <th className="px-4 py-3 font-semibold text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                      {/* Current Live Row */}
-                      {adviceGenerated && currentAudit && (
-                        <tr className={`hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors ${selectedHistoryId === null ? "bg-brand-50/20 dark:bg-brand-500/5 font-semibold text-brand-500 dark:text-brand-400" : ""}`}>
-                          <td className="px-4 py-4 flex items-center gap-2">
+                <>
+                  {/* Mobile Card View */}
+                  <div className="md:hidden space-y-3">
+                    {/* Current Live Card */}
+                    {adviceGenerated && currentAudit && (
+                      <div
+                        onClick={() => handleRestoreSnapshot(null)}
+                        className={`rounded-xl p-4 border cursor-pointer transition-all ${
+                          selectedHistoryId === null
+                            ? "border-brand-500/30 bg-brand-50/20 dark:bg-brand-500/5"
+                            : "border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 hover:border-gray-200 dark:hover:border-gray-700"
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-                            <span>Active Diagnostic (Current)</span>
-                          </td>
-                          <td className="px-4 py-4 text-right">${currentAudit.portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                          <td className={`px-4 py-4 text-right font-bold ${getRiskScoreColor(currentAudit.overallRiskScore)}`}>
+                            <span className="font-semibold text-sm text-gray-900 dark:text-white">Active Diagnostic</span>
+                          </div>
+                          <span className={`text-sm font-bold ${getRiskScoreColor(currentAudit.overallRiskScore)}`}>
                             {currentAudit.overallRiskScore}/100
-                          </td>
-                          <td className="px-4 py-4 text-right text-gray-500">{currentAudit.investmentTimeline}</td>
-                          <td className="px-4 py-4 text-right">
-                            <span className="text-red-500">{currentAudit.concentrationRisks.length} risks</span>
-                            {currentAudit.savingsWarnings.length > 0 && (
-                              <span className="text-orange-500 ml-1">• {currentAudit.savingsWarnings.length} warnings</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-4 text-right">
-                            <button
-                              onClick={() => handleRestoreSnapshot(null)}
-                              disabled={selectedHistoryId === null}
-                              className={`text-xs font-bold transition-all ${
-                                selectedHistoryId === null
-                                  ? "text-gray-400 cursor-default"
-                                  : "text-brand-500 hover:text-brand-600 dark:hover:text-brand-400"
-                              }`}
-                            >
-                              Viewing
-                            </button>
-                          </td>
-                        </tr>
-                      )}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">Value</span>
+                            <span className="text-gray-900 dark:text-white font-medium">RM {currentAudit.portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">Findings</span>
+                            <span className="text-red-500 font-medium">{currentAudit.concentrationRisks.length} risks</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
-                      {/* History items */}
-                      {auditHistory.map((entry) => {
-                        const isSelected = selectedHistoryId === entry.id;
-                        const hasMultipleAudits = auditHistory.length > 1 || auditHistoryTotalPages > 1;
-                        return (
-                          <tr
-                            key={entry.id}
-                            className={`hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors ${isSelected ? "bg-brand-50/20 dark:bg-brand-500/5 font-semibold text-brand-500 dark:text-brand-400" : ""}`}
-                          >
-                            <td className="px-4 py-4">{formatGmt8(entry.analyzedAt)}</td>
-                            <td className="px-4 py-4 text-right">${entry.portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                            <td className={`px-4 py-4 text-right font-bold ${getRiskScoreColor(entry.overallRiskScore)}`}>
+                    {/* History Cards */}
+                    {auditHistory.map((entry) => {
+                      const isSelected = selectedHistoryId === entry.id;
+                      return (
+                        <div
+                          key={entry.id}
+                          onClick={() => handleRestoreSnapshot(entry.id)}
+                          className={`rounded-xl p-4 border cursor-pointer transition-all ${
+                            isSelected
+                              ? "border-brand-500/30 bg-brand-50/20 dark:bg-brand-500/5"
+                              : "border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 hover:border-gray-200 dark:hover:border-gray-700"
+                          }`}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <span className="font-semibold text-sm text-gray-900 dark:text-white truncate max-w-[65%]">{formatGmt8(entry.analyzedAt)}</span>
+                            <span className={`text-sm font-bold ${getRiskScoreColor(entry.overallRiskScore)}`}>
                               {entry.overallRiskScore}/100
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-gray-500 dark:text-gray-400">Value</span>
+                              <span className="text-gray-900 dark:text-white font-medium">RM {entry.portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500 dark:text-gray-400">Findings</span>
+                              <span className="text-red-500 font-medium">{entry.concentrationRisks.length} risks</span>
+                            </div>
+                          </div>
+                          {isSelected && (
+                            <div className="mt-2 text-[10px] font-bold text-brand-500 text-right">Currently Viewing</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                      <thead className="text-[10px] text-gray-500 uppercase border-b border-gray-150 dark:border-gray-800">
+                        <tr>
+                          <th className="px-4 py-3 font-semibold">Audit Date</th>
+                          <th className="px-4 py-3 font-semibold text-right">Portfolio Value</th>
+                          <th className="px-4 py-3 font-semibold text-right">Risk Score</th>
+                          <th className="px-4 py-3 font-semibold text-right">Timeline</th>
+                          <th className="px-4 py-3 font-semibold text-right">Findings</th>
+                          <th className="px-4 py-3 font-semibold text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                        {/* Current Live Row */}
+                        {adviceGenerated && currentAudit && (
+                          <tr className={`hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors ${selectedHistoryId === null ? "bg-brand-50/20 dark:bg-brand-500/5 font-semibold text-brand-500 dark:text-brand-400" : ""}`}>
+                            <td className="px-4 py-4 flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
+                              <span>Active Diagnostic (Current)</span>
                             </td>
-                            <td className="px-4 py-4 text-right text-gray-500">{entry.investmentTimeline}</td>
+                            <td className="px-4 py-4 text-right">${currentAudit.portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            <td className={`px-4 py-4 text-right font-bold ${getRiskScoreColor(currentAudit.overallRiskScore)}`}>
+                              {currentAudit.overallRiskScore}/100
+                            </td>
+                            <td className="px-4 py-4 text-right text-gray-500">{currentAudit.investmentTimeline}</td>
                             <td className="px-4 py-4 text-right">
-                              <span className="text-red-500">{entry.concentrationRisks.length} risks</span>
-                              {entry.savingsWarnings.length > 0 && (
-                                <span className="text-orange-500 ml-1">• {entry.savingsWarnings.length} warnings</span>
+                              <span className="text-red-500">{currentAudit.concentrationRisks.length} risks</span>
+                              {currentAudit.savingsWarnings.length > 0 && (
+                                <span className="text-orange-500 ml-1">• {currentAudit.savingsWarnings.length} warnings</span>
                               )}
                             </td>
                             <td className="px-4 py-4 text-right">
                               <button
-                                onClick={() => handleRestoreSnapshot(entry.id)}
+                                onClick={() => handleRestoreSnapshot(null)}
+                                disabled={selectedHistoryId === null}
                                 className={`text-xs font-bold transition-all ${
-                                  isSelected
-                                    ? "text-gray-450 cursor-default"
+                                  selectedHistoryId === null
+                                    ? "text-gray-400 cursor-default"
                                     : "text-brand-500 hover:text-brand-600 dark:hover:text-brand-400"
                                 }`}
                               >
-                                {isSelected ? "Viewing" : hasMultipleAudits ? "Restore Snapshot" : "View"}
+                                Viewing
                               </button>
                             </td>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                        )}
+
+                        {/* History items */}
+                        {auditHistory.map((entry) => {
+                          const isSelected = selectedHistoryId === entry.id;
+                          const hasMultipleAudits = auditHistory.length > 1 || auditHistoryTotalPages > 1;
+                          return (
+                            <tr
+                              key={entry.id}
+                              className={`hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors ${isSelected ? "bg-brand-50/20 dark:bg-brand-500/5 font-semibold text-brand-500 dark:text-brand-400" : ""}`}
+                            >
+                              <td className="px-4 py-4">{formatGmt8(entry.analyzedAt)}</td>
+                              <td className="px-4 py-4 text-right">${entry.portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                              <td className={`px-4 py-4 text-right font-bold ${getRiskScoreColor(entry.overallRiskScore)}`}>
+                                {entry.overallRiskScore}/100
+                              </td>
+                              <td className="px-4 py-4 text-right text-gray-500">{entry.investmentTimeline}</td>
+                              <td className="px-4 py-4 text-right">
+                                <span className="text-red-500">{entry.concentrationRisks.length} risks</span>
+                                {entry.savingsWarnings.length > 0 && (
+                                  <span className="text-orange-500 ml-1">• {entry.savingsWarnings.length} warnings</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-4 text-right">
+                                <button
+                                  onClick={() => handleRestoreSnapshot(entry.id)}
+                                  className={`text-xs font-bold transition-all ${
+                                    isSelected
+                                      ? "text-gray-450 cursor-default"
+                                      : "text-brand-500 hover:text-brand-600 dark:hover:text-brand-400"
+                                  }`}
+                                >
+                                  {isSelected ? "Viewing" : hasMultipleAudits ? "Restore Snapshot" : "View"}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
 
                   {/* Pagination */}
                   {auditHistoryTotalPages > 1 && (
@@ -1147,7 +1221,7 @@ export default function Advisor() {
                       </button>
                     </div>
                   )}
-                </div>
+                </>
               )}
             </div>
           </div>
@@ -1368,9 +1442,9 @@ export default function Advisor() {
                           };
 
                           return Object.entries(factorMap).map(([key, val]: any) => (
-                            <div key={key} className="border border-gray-100 dark:border-gray-800 rounded-xl p-3 bg-gray-50/30 dark:bg-gray-900/30 flex items-center justify-between gap-2">
-                              <span className="text-xs font-bold text-gray-400 uppercase capitalize">{key}</span>
-                              <span className={`text-xs font-extrabold px-2 py-0.5 rounded-md border uppercase ${getFactorStyle(val)}`}>
+                            <div key={key} className="border border-gray-100 dark:border-gray-800 rounded-xl p-2 md:p-3 bg-gray-50/30 dark:bg-gray-900/30 flex items-center justify-between gap-1 md:gap-2 min-w-0">
+                              <span className="text-[10px] md:text-xs font-bold text-gray-400 uppercase capitalize truncate">{key}</span>
+                              <span className={`text-[10px] md:text-xs font-extrabold px-1.5 md:px-2 py-0.5 rounded-md border uppercase whitespace-nowrap ${getFactorStyle(val)}`}>
                                 {val}
                               </span>
                             </div>

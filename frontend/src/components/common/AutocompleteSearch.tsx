@@ -200,14 +200,25 @@ export default function AutocompleteSearch({
 
       <div ref={containerRef} className="relative w-full">
         <div className="relative">
+          {/* Mobile input with short placeholder */}
           <input
             type="text"
-            placeholder="Type ticker or asset name (e.g. AAPL, Maybank, BTC)..."
+            placeholder="Search ticker (e.g. AAPL)"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-shadow font-medium"
+            className="md:hidden w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-shadow font-medium"
+          />
+          {/* Desktop input with full placeholder */}
+          <input
+            type="text"
+            placeholder="Type ticker or asset name (e.g. AAPL, Maybank, BTC)"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
+            className="hidden md:block w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-shadow font-medium"
           />
           {searchLoading && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
