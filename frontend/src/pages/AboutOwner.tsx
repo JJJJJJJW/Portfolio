@@ -111,6 +111,24 @@ export default function AboutOwner() {
                An aspiring Final-Semester Software Engineering student with hands-on experience building and optimizing  microservices for enterprise payment systems in a global FinTech environment. Experienced to deliver technical solutions across core transaction systems, AI agentic platform and data dashboard within provided timeline. 
             </p>
 
+            {/* Recruiter Demo Account Callout */}
+            <div className="w-full mt-4 p-4 bg-brand-500/5 border border-brand-500/20 rounded-xl text-left">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400 flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
+                </span>
+                Recruiter Demo Account
+              </h4>
+              <p className="mt-1.5 text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                Recruiters and Talent Acquisition: Please email me at{" "}
+                <a href="mailto:jwng0401@gmail.com" className="font-semibold text-brand-600 dark:text-brand-400 hover:underline">
+                  jwng0401@gmail.com
+                </a>{" "}
+                to request credentials for a temporary demo account.
+              </p>
+            </div>
+
             <hr className="w-full my-5 border-gray-100 dark:border-gray-800" />
 
             {/* Social Links */}
