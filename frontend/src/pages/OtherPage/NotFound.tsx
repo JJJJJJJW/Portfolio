@@ -5,7 +5,7 @@ export default function NotFound() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-6">
       <PageMeta
-        title="404 - Page Not Found"
+        title="404 - Page Not Found | Investment Dashboard"
         description="The page you are looking for does not exist."
       />
       <div className="max-w-md w-full text-center bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-3xl p-8 shadow-theme-md">

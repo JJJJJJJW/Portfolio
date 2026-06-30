@@ -32,8 +32,8 @@ export default function Finance() {
     return (
       <>
         <PageMeta
-          title="Finance Dashboard"
-          description="Personal portfolio management dashboard."
+          title="Portfolio Overview | Investment Dashboard"
+          description="View and track your financial portfolio, net worth, and historical performance."
         />
         <div className="flex flex-col items-center justify-center min-h-[450px] gap-4 w-full">
           <svg className="animate-spin h-10 w-10 text-brand-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -51,8 +51,8 @@ export default function Finance() {
   return (
     <>
       <PageMeta
-        title="Finance Dashboard"
-        description="Personal portfolio management dashboard."
+        title="Portfolio Overview | Investment Dashboard"
+        description="View and track your financial portfolio, net worth, and historical performance."
       />
       <div ref={containerRef} className="grid grid-cols-12 gap-4 md:gap-6">
         {/* Top Metrics: Staggered animation handled inside */}

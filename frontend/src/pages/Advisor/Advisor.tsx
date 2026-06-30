@@ -652,7 +652,7 @@ export default function Advisor() {
   return (
     <>
       <PageMeta
-        title="AI Financial Advisor - Finance & Goal Dashboard"
+        title="AI Financial Advisor - Investment Dashboard"
         description="Get personalized, automated investment advice and goal feasibility insights based on your portfolio."
       />
 

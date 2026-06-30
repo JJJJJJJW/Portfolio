@@ -337,7 +337,7 @@ export default function Positions() {
 
   return (
     <>
-      <PageMeta title="Positions & Transactions" description="Manage your investment positions and transactions." />
+      <PageMeta title="Positions & Transactions | Investment Dashboard" description="Manage your investment positions and transactions." />
 
       <div ref={containerRef} className="space-y-6 relative h-full">
         {/* Page Header & Tabs */}

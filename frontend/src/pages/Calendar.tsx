@@ -398,7 +398,7 @@ const PLCalendar: React.FC = () => {
 
   return (
     <>
-      <PageMeta title="P/L Calendar" description="Track your daily and monthly profit and loss performance." />
+      <PageMeta title="P/L Calendar | Investment Dashboard" description="Track your daily and monthly profit and loss performance." />
 
       <div ref={containerRef} className="space-y-6 relative h-full">
         {/* Header */}
