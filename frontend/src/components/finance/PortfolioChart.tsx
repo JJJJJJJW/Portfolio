@@ -95,21 +95,21 @@ export default function PortfolioChart({ chartData, currency }: PortfolioChartPr
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-5 pt-5 dark:border-gray-800 dark:bg-gray-900/[0.9] sm:px-6 sm:pt-6">
-      <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+      <div className="flex items-center justify-between gap-4">
+        <h3 className="text-base font-semibold text-gray-800 dark:text-white/90 sm:text-lg truncate">
           Portfolio Value Over Time
         </h3>
-        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 sm:p-1 shrink-0">
           <button
             onClick={() => setTimeframe("daily")}
-            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${timeframe === "daily" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${timeframe === "daily" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               }`}
           >
             Daily
           </button>
           <button
             onClick={() => setTimeframe("monthly")}
-            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${timeframe === "monthly" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${timeframe === "monthly" ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               }`}
           >
             Monthly
