@@ -1401,7 +1401,7 @@ export default function Advisor() {
                         </span>
                       </div>
                       <div className="border border-gray-100 dark:border-gray-800 rounded-xl p-4 bg-gray-50/20 dark:bg-gray-900/40">
-                        <span className="text-xs uppercase font-bold text-gray-400 block">Target Target</span>
+                        <span className="text-xs uppercase font-bold text-gray-400 block">Target Price</span>
                         <span className="text-lg font-bold text-emerald-500 mt-1 block">
                           ${activeSignal.targetPrice ? activeSignal.targetPrice.toLocaleString(undefined, {minimumFractionDigits: 2}) : "—"}
                         </span>
