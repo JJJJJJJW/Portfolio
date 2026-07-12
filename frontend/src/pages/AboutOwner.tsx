@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
-import { FaGithub, FaLinkedin } from "react-icons/fa";
+import { FaGithub, FaLinkedin, FaWhatsapp } from "react-icons/fa";
 import {
   Mail,
   ExternalLink,
@@ -166,6 +166,19 @@ export default function AboutOwner() {
                 <span className="flex items-center gap-2">
                   <Mail className="size-4 text-gray-500 dark:text-gray-400 group-hover:text-brand-500" />
                   Contact Me (Email)
+                </span>
+                <ExternalLink className="size-3.5 text-gray-400" />
+              </a>
+
+              <a
+                href="https://wa.me/60187714665"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition duration-200 dark:text-gray-300 dark:bg-white/5 dark:hover:bg-white/10 dark:border-gray-800 group"
+              >
+                <span className="flex items-center gap-2">
+                  <FaWhatsapp className="size-4 text-gray-500 dark:text-gray-400 group-hover:text-[#25D366]" />
+                  WhatsApp
                 </span>
                 <ExternalLink className="size-3.5 text-gray-400" />
               </a>

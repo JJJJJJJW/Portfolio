@@ -524,9 +524,14 @@ export default function Positions() {
                                     </span>
                                   )}
                                 </div>
-                                <span className={`text-sm font-bold ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
-                                  {pos.pl >= 0 ? "+" : ""}${pos.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
+                                <div className="text-right">
+                                  <span className={`text-sm font-bold block ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                                    {pos.pl >= 0 ? "+" : ""}${pos.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </span>
+                                  <span className={`text-xs font-semibold ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                                    {pos.pl >= 0 ? "+" : ""}{(pos.quantity * pos.avgPrice > 0 ? (pos.pl / (pos.quantity * pos.avgPrice)) * 100 : 0).toFixed(2)}%
+                                  </span>
+                                </div>
                               </div>
                               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
                                 <div className="flex justify-between">
@@ -589,8 +594,13 @@ export default function Positions() {
                                   <td className="px-4 py-4 text-right font-medium text-gray-900 dark:text-white">
                                     ${pos.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
-                                  <td className={`px-4 py-4 text-right font-medium ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
-                                    {pos.pl >= 0 ? "+" : ""}${pos.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  <td className="px-4 py-4 text-right">
+                                    <span className={`font-medium block ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                                      {pos.pl >= 0 ? "+" : ""}${pos.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                    <span className={`text-xs font-semibold block mt-0.5 ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                                      {pos.pl >= 0 ? "+" : ""}{(pos.quantity * pos.avgPrice > 0 ? (pos.pl / (pos.quantity * pos.avgPrice)) * 100 : 0).toFixed(2)}%
+                                    </span>
                                   </td>
                                 </tr>
                               ))}
@@ -636,9 +646,14 @@ export default function Positions() {
                                     </span>
                                   )}
                                 </div>
-                                <span className={`text-sm font-bold ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
-                                  {pos.pl >= 0 ? "+" : ""}RM {pos.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
+                                <div className="text-right">
+                                  <span className={`text-sm font-bold block ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                                    {pos.pl >= 0 ? "+" : ""}RM {pos.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </span>
+                                  <span className={`text-xs font-semibold ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                                    {pos.pl >= 0 ? "+" : ""}{(pos.quantity * pos.avgPrice > 0 ? (pos.pl / (pos.quantity * pos.avgPrice)) * 100 : 0).toFixed(2)}%
+                                  </span>
+                                </div>
                               </div>
                               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
                                 <div className="flex justify-between">
@@ -701,8 +716,13 @@ export default function Positions() {
                                   <td className="px-4 py-4 text-right font-medium text-gray-900 dark:text-white">
                                     RM {pos.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
-                                  <td className={`px-4 py-4 text-right font-medium ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
-                                    {pos.pl >= 0 ? "+" : ""}RM {pos.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  <td className="px-4 py-4 text-right">
+                                    <span className={`font-medium block ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                                      {pos.pl >= 0 ? "+" : ""}RM {pos.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                    <span className={`text-xs font-semibold block mt-0.5 ${pos.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                                      {pos.pl >= 0 ? "+" : ""}{(pos.quantity * pos.avgPrice > 0 ? (pos.pl / (pos.quantity * pos.avgPrice)) * 100 : 0).toFixed(2)}%
+                                    </span>
                                   </td>
                                 </tr>
                               ))}
@@ -991,9 +1011,14 @@ export default function Positions() {
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-3 border border-gray-100 dark:border-gray-800/60 col-span-2 sm:col-span-1">
                   <span className="text-xs text-gray-500 dark:text-gray-400 block mb-0.5">Profit / Loss</span>
-                  <span className={`text-lg font-bold ${selectedPosition.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
-                    {selectedPosition.pl >= 0 ? "+" : ""}{selectedPosition.currency === "MYR" ? "RM " : "$"}{selectedPosition.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className={`text-lg font-bold ${selectedPosition.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                      {selectedPosition.pl >= 0 ? "+" : ""}{selectedPosition.currency === "MYR" ? "RM " : "$"}{selectedPosition.pl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <span className={`text-xs font-semibold ${selectedPosition.pl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                      {selectedPosition.pl >= 0 ? "+" : ""}{(selectedPosition.quantity * selectedPosition.avgPrice > 0 ? (selectedPosition.pl / (selectedPosition.quantity * selectedPosition.avgPrice)) * 100 : 0).toFixed(2)}%
+                    </span>
+                  </div>
                 </div>
               </div>
 

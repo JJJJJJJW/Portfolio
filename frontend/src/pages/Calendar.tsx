@@ -26,8 +26,15 @@ function generateDailyPL(year: number, month: number): Record<string, PLEntry> {
 
     const key = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     const pl = Math.round((Math.random() * 2000 - 800) * 100) / 100;
-    // Random daily % between -2% and +3%
-    const pct = Math.round((Math.random() * 5 - 2) * 100) / 100;
+    
+    // Ensure pct matches the sign of pl
+    let pct = 0;
+    if (pl > 0) {
+      pct = Math.round((Math.random() * 2.9 + 0.1) * 100) / 100;
+    } else if (pl < 0) {
+      pct = Math.round((Math.random() * -1.9 - 0.1) * 100) / 100;
+    }
+    
     data[key] = { pl, pct };
   }
   return data;
@@ -42,8 +49,15 @@ function generateYearlyPL(year: number): Record<string, PLEntry> {
 
     const monthKey = `${year}-${String(m + 1).padStart(2, "0")}`;
     const pl = Math.round((Math.random() * 9000 - 3000) * 100) / 100;
-    // Random monthly % between -8% and +15%
-    const pct = Math.round((Math.random() * 23 - 8) * 100) / 100;
+    
+    // Ensure pct matches the sign of pl
+    let pct = 0;
+    if (pl > 0) {
+      pct = Math.round((Math.random() * 14.5 + 0.5) * 100) / 100;
+    } else if (pl < 0) {
+      pct = Math.round((Math.random() * -7.5 - 0.5) * 100) / 100;
+    }
+    
     data[monthKey] = { pl, pct };
   }
   return data;
@@ -181,14 +195,26 @@ const PLCalendar: React.FC = () => {
     return generateYearlyPL(currentYear);
   }, [isAuthenticated, snapshots, currentYear]);
 
+  // --- Selected Month Daily PL ---
+  const selectedMonthDailyPL = useMemo(() => {
+    const prefix = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-`;
+    const filtered: Record<string, PLEntry> = {};
+    for (const [dateKey, entry] of Object.entries(dailyPL)) {
+      if (dateKey.startsWith(prefix)) {
+        filtered[dateKey] = entry;
+      }
+    }
+    return filtered;
+  }, [dailyPL, currentYear, currentMonth]);
+
   // --- Summary Stats ---
   const monthTotal = useMemo(() => {
-    return Object.values(dailyPL).reduce((sum, v) => sum + v.pl, 0);
-  }, [dailyPL]);
+    return Object.values(selectedMonthDailyPL).reduce((sum, v) => sum + v.pl, 0);
+  }, [selectedMonthDailyPL]);
 
   const monthTotalPct = useMemo(() => {
-    return Object.values(dailyPL).reduce((sum, v) => sum + v.pct, 0);
-  }, [dailyPL]);
+    return Object.values(selectedMonthDailyPL).reduce((sum, v) => sum + v.pct, 0);
+  }, [selectedMonthDailyPL]);
 
   const yearTotal = useMemo(() => {
     return Object.values(yearlyPL).reduce((sum, v) => sum + v.pl, 0);
@@ -199,16 +225,28 @@ const PLCalendar: React.FC = () => {
   }, [yearlyPL]);
 
   const bestDay = useMemo(() => {
-    const entries = Object.entries(dailyPL);
+    const entries = Object.entries(selectedMonthDailyPL);
     if (entries.length === 0) return null;
     return entries.reduce((best, curr) => (curr[1].pl > best[1].pl ? curr : best));
-  }, [dailyPL]);
+  }, [selectedMonthDailyPL]);
 
   const worstDay = useMemo(() => {
-    const entries = Object.entries(dailyPL);
+    const entries = Object.entries(selectedMonthDailyPL);
     if (entries.length === 0) return null;
     return entries.reduce((worst, curr) => (curr[1].pl < worst[1].pl ? curr : worst));
-  }, [dailyPL]);
+  }, [selectedMonthDailyPL]);
+
+  const bestMonth = useMemo(() => {
+    const entries = Object.entries(yearlyPL);
+    if (entries.length === 0) return null;
+    return entries.reduce((best, curr) => (curr[1].pl > best[1].pl ? curr : best));
+  }, [yearlyPL]);
+
+  const worstMonth = useMemo(() => {
+    const entries = Object.entries(yearlyPL);
+    if (entries.length === 0) return null;
+    return entries.reduce((worst, curr) => (curr[1].pl < worst[1].pl ? curr : worst));
+  }, [yearlyPL]);
 
   // --- Calendar Grid Helpers ---
   const getCalendarDays = () => {
@@ -449,29 +487,59 @@ const PLCalendar: React.FC = () => {
             </span>
           </div>
           <div className="bg-white dark:bg-gray-900/[0.8] rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
-            <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Best Day</span>
-            <span className="text-xl font-bold text-brand-500">
-              {bestDay ? formatPLFull(bestDay[1].pl) : "—"}
+            <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
+              {viewMode === "month" ? "Best Day" : "Best Month"}
             </span>
-            {bestDay && (
-              <span className="text-m font-medium text-brand-500/70 block">{formatPct(bestDay[1].pct)}</span>
+            <span className="text-xl font-bold text-brand-500">
+              {viewMode === "month"
+                ? (bestDay ? formatPLFull(bestDay[1].pl) : "—")
+                : (bestMonth ? formatPLFull(bestMonth[1].pl) : "—")
+              }
+            </span>
+            {viewMode === "month" ? (
+              bestDay && (
+                <span className="text-m font-medium text-brand-500/70 block">{formatPct(bestDay[1].pct)}</span>
+              )
+            ) : (
+              bestMonth && (
+                <span className="text-m font-medium text-brand-500/70 block">{formatPct(bestMonth[1].pct)}</span>
+              )
             )}
           </div>
           <div className="bg-white dark:bg-gray-900/[0.8] rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
-            <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Worst Day</span>
-            <span className={`text-xl font-bold ${
-              worstDay && worstDay[1].pl < 0 
-                ? "text-red-500" 
-                : (worstDay && worstDay[1].pl > 0 ? "text-brand-500" : "text-gray-400 dark:text-gray-500")
-            }`}>
-              {worstDay ? formatPLFull(worstDay[1].pl) : "—"}
+            <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
+              {viewMode === "month" ? "Worst Day" : "Worst Month"}
             </span>
-            {worstDay && (
-              <span className={`text-m font-medium block ${
-                worstDay[1].pl < 0 
-                  ? "text-red-500/70" 
-                  : (worstDay[1].pl > 0 ? "text-brand-500/70" : "text-gray-400/70 dark:text-gray-500/70")
-              }`}>{formatPct(worstDay[1].pct)}</span>
+            <span className={`text-xl font-bold ${
+              viewMode === "month"
+                ? (worstDay && worstDay[1].pl < 0 
+                  ? "text-red-500" 
+                  : (worstDay && worstDay[1].pl > 0 ? "text-brand-500" : "text-gray-400 dark:text-gray-500"))
+                : (worstMonth && worstMonth[1].pl < 0 
+                  ? "text-red-500" 
+                  : (worstMonth && worstMonth[1].pl > 0 ? "text-brand-500" : "text-gray-400 dark:text-gray-500"))
+            }`}>
+              {viewMode === "month"
+                ? (worstDay ? formatPLFull(worstDay[1].pl) : "—")
+                : (worstMonth ? formatPLFull(worstMonth[1].pl) : "—")
+              }
+            </span>
+            {viewMode === "month" ? (
+              worstDay && (
+                <span className={`text-m font-medium block ${
+                  worstDay[1].pl < 0 
+                    ? "text-red-500/70" 
+                    : (worstDay[1].pl > 0 ? "text-brand-500/70" : "text-gray-400/70 dark:text-gray-500/70")
+                }`}>{formatPct(worstDay[1].pct)}</span>
+              )
+            ) : (
+              worstMonth && (
+                <span className={`text-m font-medium block ${
+                  worstMonth[1].pl < 0 
+                    ? "text-red-500/70" 
+                    : (worstMonth[1].pl > 0 ? "text-brand-500/70" : "text-gray-400/70 dark:text-gray-500/70")
+                }`}>{formatPct(worstMonth[1].pct)}</span>
+              )
             )}
           </div>
         </div>

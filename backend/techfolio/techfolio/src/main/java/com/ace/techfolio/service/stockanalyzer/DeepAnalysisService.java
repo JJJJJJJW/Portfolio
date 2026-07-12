@@ -101,8 +101,21 @@ public class DeepAnalysisService {
         // 3. Calculate technical indicators
         StockSnapshot snapshot = technicalAnalysisService.calculateIndicators(symbol, bars);
         if (snapshot == null) {
-            log.error("Failed to calculate indicators for {}. Aborting analysis.", symbol);
-            return null;
+            log.error("Failed to calculate indicators for {}. Saving failed signal.", symbol);
+            TradingSignal failedSignal = new TradingSignal();
+            failedSignal.setSymbol(symbol.toUpperCase());
+            failedSignal.setSignal("FAILED");
+            failedSignal.setConfidence(0);
+            failedSignal.setReasoning("Failed to fetch price data or calculate technical indicators due to API or data error.");
+            failedSignal.setTimeHorizon("N/A");
+            failedSignal.setAnalyzedAt(LocalDateTime.now());
+            failedSignal.setDataAsOf(LocalDate.now());
+            try {
+                signalRepo.save(failedSignal);
+            } catch (Exception e) {
+                log.error("Failed to save failed signal for {}: {}", symbol, e.getMessage());
+            }
+            return failedSignal;
         }
 
         // Save snapshot

@@ -81,7 +81,7 @@ public class GeminiService {
             }
         }
 
-        return buildDefaultHoldSignal(symbol);
+        return buildDefaultFailedSignal(symbol);
     }
 
     private TradingSignal analyzeWithModel(String model, String symbol, String systemPrompt, String userPrompt)
@@ -309,12 +309,12 @@ public class GeminiService {
         return signal;
     }
 
-    private TradingSignal buildDefaultHoldSignal(String symbol) {
+    private TradingSignal buildDefaultFailedSignal(String symbol) {
         TradingSignal signal = new TradingSignal();
         signal.setSymbol(symbol);
-        signal.setSignal("HOLD");
+        signal.setSignal("FAILED");
         signal.setConfidence(0);
-        signal.setReasoning("Unable to complete analysis — insufficient data or API error. Defaulting to HOLD.");
+        signal.setReasoning("Unable to complete analysis — insufficient data or API error.");
         signal.setTimeHorizon("N/A");
         signal.setAnalyzedAt(LocalDateTime.now());
         signal.setDataAsOf(LocalDate.now());
