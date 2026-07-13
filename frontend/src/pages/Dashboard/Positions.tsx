@@ -176,9 +176,13 @@ export default function Positions() {
   // Compute Subtotals
   const rmTotalValue = rmPositions.reduce((sum, p) => sum + p.totalValue, 0);
   const rmTotalPl = rmPositions.reduce((sum, p) => sum + p.pl, 0);
+  const rmTotalCost = rmPositions.reduce((sum, p) => sum + (p.quantity * p.avgPrice), 0);
+  const rmTotalPlPercent = rmTotalCost > 0 ? (rmTotalPl / rmTotalCost) * 100 : 0;
 
   const usdTotalValue = usdPositions.reduce((sum, p) => sum + p.totalValue, 0);
   const usdTotalPl = usdPositions.reduce((sum, p) => sum + p.pl, 0);
+  const usdTotalCost = usdPositions.reduce((sum, p) => sum + (p.quantity * p.avgPrice), 0);
+  const usdTotalPlPercent = usdTotalCost > 0 ? (usdTotalPl / usdTotalCost) * 100 : 0;
 
   // Compute Grand Totals in Selected Currency
   const grandTotalValue = selectedCurrency === "USD"
@@ -188,6 +192,9 @@ export default function Positions() {
   const grandTotalPl = selectedCurrency === "USD"
     ? usdTotalPl + (rmTotalPl / usdToMyrRate)
     : (usdTotalPl * usdToMyrRate) + rmTotalPl;
+
+  const grandTotalCost = grandTotalValue - grandTotalPl;
+  const grandTotalPlPercent = grandTotalCost > 0 ? (grandTotalPl / grandTotalCost) * 100 : 0;
 
 
 
@@ -463,11 +470,16 @@ export default function Positions() {
                   </div>
                   <div>
                     <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider block font-semibold">Total Profit / Loss</span>
-                    <span className={`text-2xl font-extrabold ${grandTotalPl >= 0 ? "text-brand-500" : "text-red-500"}`}>
-                      {grandTotalPl >= 0 ? "+" : ""}
-                      {selectedCurrency === "USD" ? "$" : "RM "}
-                      {grandTotalPl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
+                    <div className="flex items-baseline gap-2">
+                      <span className={`text-2xl font-extrabold ${grandTotalPl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                        {grandTotalPl >= 0 ? "+" : ""}
+                        {selectedCurrency === "USD" ? "$" : "RM "}
+                        {grandTotalPl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <span className={`text-sm font-semibold ${grandTotalPl >= 0 ? "text-brand-500" : "text-red-500"}`}>
+                        ({grandTotalPlPercent >= 0 ? "+" : ""}{grandTotalPlPercent.toFixed(2)}%)
+                      </span>
+                    </div>
                   </div>
                   <div className="flex flex-col justify-center">
                     <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider block font-semibold">Exchange Rate</span>
@@ -498,7 +510,8 @@ export default function Positions() {
                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                         <span className="hidden sm:inline">Subtotal: </span>${usdTotalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })} | P/L:{" "}
                         <span className={usdTotalPl >= 0 ? "text-brand-500" : "text-red-500"}>
-                          {usdTotalPl >= 0 ? "+" : ""}${usdTotalPl.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          {usdTotalPl >= 0 ? "+" : ""}${usdTotalPl.toLocaleString(undefined, { minimumFractionDigits: 2 })}{" "}
+                          ({usdTotalPlPercent >= 0 ? "+" : ""}{usdTotalPlPercent.toFixed(2)}%)
                         </span>
                       </span>
                     </div>
@@ -620,7 +633,8 @@ export default function Positions() {
                       <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                         <span className="hidden sm:inline">Subtotal: </span>RM {rmTotalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })} | P/L:{" "}
                         <span className={rmTotalPl >= 0 ? "text-brand-500" : "text-red-500"}>
-                          {rmTotalPl >= 0 ? "+" : ""}RM {rmTotalPl.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          {rmTotalPl >= 0 ? "+" : ""}RM {rmTotalPl.toLocaleString(undefined, { minimumFractionDigits: 2 })}{" "}
+                          ({rmTotalPlPercent >= 0 ? "+" : ""}{rmTotalPlPercent.toFixed(2)}%)
                         </span>
                       </span>
                     </div>
