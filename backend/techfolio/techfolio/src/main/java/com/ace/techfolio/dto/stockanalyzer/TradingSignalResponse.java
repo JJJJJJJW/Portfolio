@@ -22,6 +22,7 @@ public class TradingSignalResponse {
     private String factors;
     private LocalDateTime analyzedAt;
     private LocalDate dataAsOf;
+    private String model;
     private String disclaimer;
 
     public TradingSignalResponse() {
@@ -68,6 +69,9 @@ public class TradingSignalResponse {
 
     public LocalDate getDataAsOf() { return dataAsOf; }
     public void setDataAsOf(LocalDate dataAsOf) { this.dataAsOf = dataAsOf; }
+
+    public String getModel() { return model; }
+    public void setModel(String model) { this.model = model; }
 
     public String getDisclaimer() { return disclaimer; }
     public void setDisclaimer(String disclaimer) { this.disclaimer = disclaimer; }

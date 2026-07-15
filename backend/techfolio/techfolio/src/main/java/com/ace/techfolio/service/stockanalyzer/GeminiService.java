@@ -96,7 +96,9 @@ public class GeminiService {
         for (int attempt = 1; attempt <= 2; attempt++) {
             try {
                 String response = callGemini(model, systemPrompt, userPrompt);
-                return parseResponse(response, symbol);
+                TradingSignal signal = parseResponse(response, symbol);
+                signal.setModel(model);
+                return signal;
             } catch (JsonProcessingException e) {
                 log.warn("Model {} - Attempt {}/2: Failed to parse Gemini JSON for {}: {}", model, attempt, symbol,
                         e.getMessage());
@@ -325,6 +327,7 @@ public class GeminiService {
         signal.setTimeHorizon("N/A");
         signal.setAnalyzedAt(LocalDateTime.now());
         signal.setDataAsOf(LocalDate.now());
+        signal.setModel("NONE");
         return signal;
     }
 

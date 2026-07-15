@@ -1357,6 +1357,7 @@ export default function Advisor() {
                         </div>
                         <p className="text-sm text-gray-400 mt-1">
                           Generated on {formatGmt8(activeSignal.analyzedAt)} • Data as of {activeSignal.dataAsOf}
+                          {activeSignal.model && activeSignal.model !== "NONE" && ` • Model: ${activeSignal.model}`}
                         </p>
                       </div>
 
@@ -1508,7 +1509,14 @@ export default function Advisor() {
                             className="border border-gray-100 dark:border-gray-800 rounded-xl p-2.5 flex items-center justify-between gap-2 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer transition-colors"
                           >
                             <div>
-                              <span className="font-bold text-sm uppercase text-gray-900 dark:text-white block">{sig.symbol}</span>
+                              <span className="font-bold text-sm uppercase text-gray-900 dark:text-white block">
+                                {sig.symbol}
+                                {sig.model && sig.model !== "NONE" && (
+                                  <span className="ml-2 inline-block text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 font-semibold normal-case">
+                                    {sig.model}
+                                  </span>
+                                )}
+                              </span>
                               <span className="text-xs text-gray-400 font-semibold">{formatGmt8(sig.analyzedAt)}</span>
                             </div>
                             <div className="flex items-center gap-2">

@@ -69,6 +69,9 @@ public class TradingSignal {
     @Column(name = "data_as_of")
     private LocalDate dataAsOf;
 
+    @Column(name = "model", length = 50)
+    private String model;
+
     // =========================================================================
     // Constructors
     // =========================================================================
@@ -118,4 +121,7 @@ public class TradingSignal {
 
     public LocalDate getDataAsOf() { return dataAsOf; }
     public void setDataAsOf(LocalDate dataAsOf) { this.dataAsOf = dataAsOf; }
+
+    public String getModel() { return model; }
+    public void setModel(String model) { this.model = model; }
 }

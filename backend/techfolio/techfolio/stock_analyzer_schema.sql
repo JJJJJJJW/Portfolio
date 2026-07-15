@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS trading_signals (
     reasoning         TEXT,
     time_horizon      VARCHAR(50),
     factors           TEXT,
+    model             VARCHAR(50),
     analyzed_at       TIMESTAMP       NOT NULL DEFAULT now(),
     data_as_of        DATE
 );

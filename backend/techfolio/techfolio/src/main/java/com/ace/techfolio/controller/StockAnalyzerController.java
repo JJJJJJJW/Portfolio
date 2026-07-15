@@ -319,6 +319,7 @@ public class StockAnalyzerController {
         resp.setFactors(signal.getFactors());
         resp.setAnalyzedAt(signal.getAnalyzedAt());
         resp.setDataAsOf(signal.getDataAsOf());
+        resp.setModel(signal.getModel());
         return resp;
     }
 }

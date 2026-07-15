@@ -110,6 +110,7 @@ public class DeepAnalysisService {
             failedSignal.setTimeHorizon("N/A");
             failedSignal.setAnalyzedAt(LocalDateTime.now());
             failedSignal.setDataAsOf(LocalDate.now());
+            failedSignal.setModel("NONE");
             try {
                 signalRepo.save(failedSignal);
             } catch (Exception e) {
@@ -146,8 +147,8 @@ public class DeepAnalysisService {
         if (signal != null) {
             try {
                 signalRepo.save(signal);
-                log.info("Deep analysis complete for {}: signal={}, confidence={}",
-                        symbol, signal.getSignal(), signal.getConfidence());
+                log.info("Deep analysis complete for {}: signal={}, confidence={}, model={}",
+                        symbol, signal.getSignal(), signal.getConfidence(), signal.getModel());
             } catch (Exception e) {
                 log.error("Failed to save signal for {}: {}", symbol, e.getMessage());
             }

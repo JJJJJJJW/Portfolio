@@ -38,8 +38,6 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
-
     @Value("${techfolio.supabase.url}")
     private String supabaseUrl;
 
