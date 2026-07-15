@@ -10,5 +10,6 @@ public enum AssetCategory {
     CASH,
     BOND,
     MUTUAL_FUND,
+    ETF,
     OTHER
 }

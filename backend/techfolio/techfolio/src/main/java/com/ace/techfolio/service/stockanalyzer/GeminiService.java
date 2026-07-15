@@ -62,22 +62,29 @@ public class GeminiService {
         String systemPrompt = buildSystemPrompt(riskAppetite);
         String userPrompt = buildUserPrompt(symbol, snapshot, fundamentals, macro, newsHeadlines);
 
-        String primaryModel = props.getGemini().getModel();
-        try {
-            return analyzeWithModel(primaryModel, symbol, systemPrompt, userPrompt);
-        } catch (Exception e) {
-            String fallbackModel = props.getGemini().getFallbackModel();
-            if (fallbackModel != null && !fallbackModel.isBlank() && !fallbackModel.equals(primaryModel)) {
-                log.warn("Primary model ({}) failed for {}: {}. Attempting fallback model ({})",
-                        primaryModel, symbol, e.getMessage(), fallbackModel);
-                try {
-                    return analyzeWithModel(fallbackModel, symbol, systemPrompt, userPrompt);
-                } catch (Exception ex) {
-                    log.error("Fallback model ({}) also failed for {}: {}", fallbackModel, symbol, ex.getMessage());
+        String model1 = props.getGemini().getModel();
+        String model2 = props.getGemini().getFallbackModel();
+
+        List<String> models = new java.util.ArrayList<>();
+        if (model1 != null && !model1.isBlank()) {
+            models.add(model1.trim());
+        }
+        if (model2 != null && !model2.isBlank() && !models.contains(model2.trim())) {
+            models.add(model2.trim());
+        }
+        if (!models.contains("gemini-3-flash-preview")) {
+            models.add("gemini-3-flash-preview");
+        }
+
+        for (int i = 0; i < models.size(); i++) {
+            String currentModel = models.get(i);
+            try {
+                if (i > 0) {
+                    log.warn("Attempting fallback model ({}) for {}", currentModel, symbol);
                 }
-            } else {
-                log.error("Primary model ({}) failed for {} and no valid fallback model is configured.", primaryModel,
-                        symbol);
+                return analyzeWithModel(currentModel, symbol, systemPrompt, userPrompt);
+            } catch (Exception e) {
+                log.error("Model ({}) failed for {}: {}", currentModel, symbol, e.getMessage());
             }
         }
 

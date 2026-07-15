@@ -532,6 +532,7 @@ public class DashboardService {
             case CASH -> "Cash";
             case BOND -> "Bonds";
             case MUTUAL_FUND -> "Mutual Funds";
+            case ETF -> "ETFs";
             default -> "Other";
         };
     }

@@ -1229,6 +1229,7 @@ export default function Positions() {
                   <option value="REAL_ESTATE">Real Estate</option>
                   <option value="BOND">Bond</option>
                   <option value="MUTUAL_FUND">Mutual Fund</option>
+                  <option value="ETF">ETF</option>
                   <option value="CASH">Cash</option>
                   <option value="OTHER">Other</option>
                 </select>
