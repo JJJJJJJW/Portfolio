@@ -21,6 +21,8 @@ import Finance from "./pages/Dashboard/Finance";
 import Positions from "./pages/Dashboard/Positions";
 import Advisor from "./pages/Advisor/Advisor";
 import AboutOwner from "./pages/AboutOwner";
+import PrivacyPolicy from "./pages/Legal/PrivacyPolicy";
+import TermsOfService from "./pages/Legal/TermsOfService";
 
 export default function App() {
   return (
@@ -64,6 +66,8 @@ export default function App() {
           {/* Auth Layout */}
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
 
           {/* Fallback Route */}
           <Route path="*" element={<NotFound />} />

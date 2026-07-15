@@ -189,10 +189,18 @@ export default function SignInForm() {
                 Don&apos;t have an account? {""}
                 <Link
                   to="/signup"
-                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
+                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400 font-semibold"
                 >
                   Sign Up
                 </Link>
+              </p>
+            </div>
+
+            <div className="mt-8 pt-4 border-t border-gray-100 dark:border-gray-800/60 text-center sm:text-start">
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                <Link to="/privacy" className="hover:underline hover:text-brand-500 transition-colors">Privacy Policy</Link>
+                <span className="mx-2 text-gray-300 dark:text-gray-700">•</span>
+                <Link to="/terms" className="hover:underline hover:text-brand-500 transition-colors">Terms of Service</Link>
               </p>
             </div>
           </div>
