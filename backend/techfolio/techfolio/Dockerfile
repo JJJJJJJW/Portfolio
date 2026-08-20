@@ -49,6 +49,6 @@ EXPOSE 10000
 #   -Xss512k                → smaller thread stacks
 #   -XX:+UseSerialGC        → low-overhead GC for small heaps
 #   -XX:TieredStopAtLevel=1 → faster JIT warmup, less memory
-ENTRYPOINT ["sh", "-c", "java -Xmx300m -Xss512k -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Djava.security.egd=file:/dev/./urandom org.springframework.boot.loader.launch.JarLauncher --server.port=${PORT}"]
+ENTRYPOINT ["sh", "-c", "java -Xmx300m -Xss512k -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Djava.security.egd=file:/dev/./urandom -jar app.jar --server.port=${PORT}"]
 
 
